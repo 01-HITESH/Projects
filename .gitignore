@@ -1,0 +1,23 @@
+﻿# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+tsconfig.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local runtime data
+services/api/storage/
+*.log
+*-smoke.jpg
+*-response.json
+
+# Env
+.env
+.env.local
