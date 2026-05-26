@@ -1,32 +1,63 @@
 # RoomMorph AI
 
-AI-powered interior redesign studio prototype.
+AI-powered interior redesign studio prototype. Upload a 2D room photo, generate several design concepts, choose a theme, convert it into an interactive 3D room, then compare and customize the result.
 
-The app follows a staged production workflow:
+The prototype runs fully locally. It uses deterministic local image and 3D fallbacks instead of external AI services, so no API keys are required.
 
-1. Upload a 2D room photo.
-2. Generate multiple redesigned concepts.
-3. Select a preferred theme.
-4. Convert the selected concept into an interactive 3D room.
-5. Compare before/after and customize the scene.
+## Project Structure
 
-## Local Apps
+- `apps/web` - Next.js frontend
+- `services/api` - FastAPI backend
+- `docs` - architecture notes
 
-- Frontend: `apps/web`
-- Backend: `services/api`
-- Docs: `docs`
+## Requirements
 
-## Run
+Install these on the device before running the project:
 
-Backend:
+- Git
+- Node.js 20 or newer
+- npm, included with Node.js
+- Python 3.11 or newer
+
+## Clone
+
+```bash
+git clone https://github.com/01-HITESH/Projects.git
+cd Projects/RoomMorph-AI
+```
+
+## Run Locally
+
+Use two terminal windows: one for the backend and one for the frontend.
+
+### 1. Start the Backend
+
+Windows PowerShell:
 
 ```powershell
 cd services\api
-python -m pip install --only-binary=:all: -r requirements.txt
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --only-binary=:all: -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Frontend:
+macOS or Linux:
+
+```bash
+cd services/api
+python3 -m venv .venv
+./.venv/bin/python -m pip install --only-binary=:all: -r requirements.txt
+./.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Backend URLs:
+
+- Health check: `http://127.0.0.1:8000/health`
+- API docs: `http://127.0.0.1:8000/docs`
+
+### 2. Start the Frontend
+
+Windows PowerShell:
 
 ```powershell
 cd apps\web
@@ -34,3 +65,39 @@ npm.cmd install
 npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
+macOS or Linux:
+
+```bash
+cd apps/web
+npm install
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+Open the app:
+
+```text
+http://127.0.0.1:3000
+```
+
+## Configuration
+
+The default frontend expects the backend at `http://localhost:8000`. To use a different API URL, create `apps/web/.env.local`:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The backend stores generated uploads and project JSON under `services/api/storage`. This folder is local runtime data and is ignored by Git.
+
+## Production Build Check
+
+```bash
+cd apps/web
+npm run build
+```
+
+## Notes
+
+- Uploaded images must be JPEG, PNG, or WebP.
+- The backend allows uploads up to 12 MB by default.
+- If ports `3000` or `8000` are already in use, start either app with a different port and update `NEXT_PUBLIC_API_BASE_URL` if the API port changes.
