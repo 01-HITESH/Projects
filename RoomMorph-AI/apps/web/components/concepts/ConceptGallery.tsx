@@ -48,7 +48,7 @@ export function ConceptGallery({ concepts, selectedId, loading, onSelect, onBuil
                 <div className="space-y-3 p-3">
                   <div>
                     <p className="text-sm font-semibold text-ink">{concept.title}</p>
-                    <p className="mt-1 text-xs text-ink/55">{concept.theme} · {Math.round(concept.score * 100)}% match</p>
+                    <p className="mt-1 text-xs text-ink/55">{concept.theme} / {Math.round(concept.score * 100)}% match</p>
                   </div>
                   <p className="text-sm leading-5 text-ink/65">{concept.rationale}</p>
                   <div className="flex gap-1.5">

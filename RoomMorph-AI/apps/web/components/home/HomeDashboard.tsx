@@ -2,6 +2,7 @@
 
 import { Box, LogOut, Plus, Trash2 } from "lucide-react";
 
+import { assetUrl } from "@/lib/api";
 import type { Project, User } from "@/types/project";
 
 type HomeDashboardProps = {
@@ -112,14 +113,15 @@ function ProjectCard({
   onOpen: () => void;
 }) {
   const concept = project.concepts.find((item) => item.id === project.selectedConceptId) ?? project.concepts[0];
+  const imageUrl = assetUrl(concept?.previewUrl ?? project.sourceImage.url);
 
   return (
     <article className="overflow-hidden rounded-lg border border-ink/10 bg-chalk shadow-soft">
       <button className="block w-full text-left" type="button" onClick={onOpen}>
-        <img alt="" className="h-56 w-full object-cover" src={concept?.previewUrl ?? project.sourceImage.url} />
+        {imageUrl ? <img alt="" className="h-56 w-full object-cover" src={imageUrl} /> : null}
         <div className="p-3">
           <p className="text-sm font-semibold text-ink">{project.brief.roomType}</p>
-          <p className="mt-1 text-xs text-ink/55">{project.status === "scene_ready" ? "3D model ready" : "Concepts ready"} · {new Date(project.updatedAt).toLocaleDateString()}</p>
+          <p className="mt-1 text-xs text-ink/55">{project.status === "scene_ready" ? "3D model ready" : "Concepts ready"} / {new Date(project.updatedAt).toLocaleDateString()}</p>
         </div>
       </button>
       <div className="border-t border-ink/10 p-3">
@@ -141,10 +143,12 @@ function ProjectRow({
   onDelete: () => Promise<void>;
   onOpen: () => void;
 }) {
+  const imageUrl = assetUrl(project.sourceImage.url);
+
   return (
     <div className="panel flex items-center gap-3 rounded-lg p-2">
       <button className="flex min-w-0 flex-1 items-center gap-3 text-left" type="button" onClick={onOpen}>
-        <img alt="" className="h-16 w-20 rounded-md object-cover" src={project.sourceImage.url} />
+        {imageUrl ? <img alt="" className="h-16 w-20 rounded-md object-cover" src={imageUrl} /> : null}
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold">{project.brief.roomType}</span>
           <span className="block text-xs text-ink/55">{new Date(project.updatedAt).toLocaleDateString()}</span>

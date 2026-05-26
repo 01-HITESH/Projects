@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Build output and caches
+.next/
+dist/
+build/
+__pycache__/
+*.py[cod]
+
+# Local configuration
+.env
+.env.*
+
+# Local runtime output
+logs/
+storage/
+services/api/storage/
