@@ -1,7 +1,6 @@
 "use client";
 
-import { Clock3 } from "lucide-react";
-import { Trash2 } from "lucide-react";
+import { Clock3, FolderOpen, Trash2 } from "lucide-react";
 
 import { assetUrl } from "@/lib/api";
 import type { Project } from "@/types/project";
@@ -20,12 +19,13 @@ export function HistoryPanel({
       <div className="mb-4">
         <p className="text-sm font-medium text-steel">Saved</p>
         <h2 className="mt-1 text-xl font-semibold text-ink">Design history</h2>
+        <p className="mt-2 text-sm leading-5 text-ink/58">Open previous rooms and compare presentation progress.</p>
       </div>
       <div className="space-y-2">
         {projects.length ? projects.map((project) => {
           const imageUrl = assetUrl(project.sourceImage.url);
           return (
-            <div className="rounded-lg border border-ink/10 bg-chalk p-2" key={project.id}>
+            <div className="rounded-lg border border-ink/10 bg-chalk p-2 shadow-sm transition hover:border-steel/35" key={project.id}>
               <button className="focus-ring flex w-full gap-3 text-left hover:border-steel" type="button" onClick={() => onOpen(project)}>
                 {imageUrl ? <img alt="" className="h-16 w-16 rounded-md object-cover" src={imageUrl} /> : null}
                 <span className="min-w-0">
@@ -48,6 +48,7 @@ export function HistoryPanel({
           );
         }) : (
           <div className="rounded-lg border border-dashed border-ink/12 bg-chalk/60 px-3 py-8 text-center text-sm text-ink/55">
+            <FolderOpen className="mx-auto mb-3 h-6 w-6 text-steel" />
             Saved redesigns will appear here.
           </div>
         )}

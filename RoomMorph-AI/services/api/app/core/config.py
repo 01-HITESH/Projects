@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     max_upload_mb: int = 12
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_image_model: str = Field(default="gpt-image-1", alias="OPENAI_IMAGE_MODEL")
 
     @computed_field
     @property

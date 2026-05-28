@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Home, Loader2 } from "lucide-react";
+import { ArrowRight, BadgeIndianRupee, Box, Home, Layers3, Loader2, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 
+import { LoginHeroScene } from "@/components/auth/LoginHeroScene";
 import type { User } from "@/types/project";
 
 type LoginViewProps = {
@@ -21,35 +23,39 @@ export function LoginView({ loading, error, onLogin }: LoginViewProps) {
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <section>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-ink/10 bg-chalk px-3 py-1.5 text-sm font-medium text-steel">
+    <main className="min-h-screen px-4 py-5 text-ink sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl items-center gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+        <section className="relative overflow-hidden rounded-lg border border-ink/10 bg-ink text-chalk shadow-panel">
+          <LoginHeroScene />
+          <div className="relative flex min-h-[650px] flex-col justify-between p-5 sm:p-8 lg:p-10">
+            <div className="eyebrow border-chalk/18 bg-chalk/10 text-chalk backdrop-blur">
             <Home className="h-4 w-4" />
             RoomMorph AI
           </div>
-          <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-ink sm:text-5xl">
-            Interior redesign workspace for AI concepts and 360 rooms
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-ink/66">
-            Sign in to view your previous projects, create new redesigns, compare before and after images, and customize generated 3D interiors.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <Metric label="Concepts" value="5 themes" />
-            <Metric label="Viewer" value="360 room" />
-            <Metric label="History" value="Saved work" />
+            <div aria-hidden="true" />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Metric icon={<Sparkles className="h-4 w-4" />} label="Concepts" value="5 themes" />
+              <Metric icon={<Box className="h-4 w-4" />} label="Viewer" value="360 room" />
+              <Metric icon={<BadgeIndianRupee className="h-4 w-4" />} label="Report" value="Budget ready" />
+            </div>
           </div>
         </section>
 
-        <form className="panel rounded-lg p-5 shadow-soft" onSubmit={submit}>
+        <form className="panel rounded-lg p-5 shadow-panel sm:p-6" onSubmit={submit}>
           <div className="mb-6">
-            <p className="text-sm font-medium text-steel">Welcome</p>
-            <h2 className="mt-1 text-2xl font-semibold text-ink">Log in</h2>
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-ink text-chalk">
+              <Layers3 className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium text-steel">Designer access</p>
+            <h2 className="mt-1 text-2xl font-semibold text-ink">Open your workspace</h2>
+            <p className="mt-2 text-sm leading-6 text-ink/60">
+              A local sign-in keeps project history separated for presentation and review.
+            </p>
           </div>
           <label className="mb-4 block space-y-2">
             <span className="text-sm font-medium text-steel">Name</span>
             <input
-              className="focus-ring h-11 w-full rounded-lg border border-ink/12 bg-chalk px-3 text-sm"
+              className="field focus-ring w-full px-3 text-sm"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -57,7 +63,7 @@ export function LoginView({ loading, error, onLogin }: LoginViewProps) {
           <label className="block space-y-2">
             <span className="text-sm font-medium text-steel">Email</span>
             <input
-              className="focus-ring h-11 w-full rounded-lg border border-ink/12 bg-chalk px-3 text-sm"
+              className="field focus-ring w-full px-3 text-sm"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -78,11 +84,11 @@ export function LoginView({ loading, error, onLogin }: LoginViewProps) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ink/10 bg-chalk px-3 py-3">
-      <p className="text-xs font-medium text-steel">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
+    <div className="rounded-lg border border-chalk/18 bg-chalk/12 px-3 py-3 backdrop-blur">
+      <p className="flex items-center gap-2 text-xs font-medium text-chalk/72">{icon}{label}</p>
+      <p className="mt-1 text-sm font-semibold text-chalk">{value}</p>
     </div>
   );
 }

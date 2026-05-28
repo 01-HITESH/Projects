@@ -13,6 +13,34 @@ export type DesignBrief = {
   themes: string[];
   palette: string[];
   constraints: string;
+  budgetRange: string;
+  lifestyle: string;
+  priority: string;
+};
+
+export type ScoreBreakdown = {
+  styleMatch: number;
+  feasibility: number;
+  budgetFit: number;
+  maintainability: number;
+  sustainability: number;
+};
+
+export type BudgetEstimate = {
+  rangeLabel: string;
+  minInr: number;
+  maxInr: number;
+  timelineWeeks: number;
+  confidence: number;
+  notes: string[];
+};
+
+export type MaterialPlanItem = {
+  item: string;
+  material: string;
+  finish: string;
+  durability: string;
+  care: string;
 };
 
 export type DesignConcept = {
@@ -24,6 +52,11 @@ export type DesignConcept = {
   previewUrl: string;
   palette: string[];
   score: number;
+  scoreBreakdown: ScoreBreakdown;
+  budget: BudgetEstimate;
+  highlights: string[];
+  tradeoffs: string[];
+  materialPlan: MaterialPlanItem[];
 };
 
 export type User = {
@@ -79,6 +112,16 @@ export type SceneDocument = {
   furniture: FurniturePrimitive[];
   lighting: { ambient: number; key: number; temperature: number };
   cameraPresets: Array<{ position: Vector3Tuple; target: Vector3Tuple }>;
+  analytics: {
+    floorArea: number;
+    walkableArea: number;
+    budgetEstimate: BudgetEstimate;
+    scores: ScoreBreakdown;
+    materialSchedule: MaterialPlanItem[];
+    clearanceNotes: string[];
+    lightingPlan: string[];
+    sustainabilityNotes: string[];
+  };
 };
 
 export type Project = {
@@ -102,8 +145,13 @@ export type RedesignResponse = {
 export type RedesignPayload = {
   userId: string;
   image: File;
+  renderMode: "local" | "ai" | "manual";
+  afterImages: File[];
   roomType: string;
   themes: string[];
   palette: string[];
   constraints: string;
+  budgetRange: string;
+  lifestyle: string;
+  priority: string;
 };

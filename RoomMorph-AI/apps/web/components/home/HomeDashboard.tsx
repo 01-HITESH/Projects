@@ -1,6 +1,7 @@
 "use client";
 
-import { Box, LogOut, Plus, Trash2 } from "lucide-react";
+import { Box, Clock3, Images, LogOut, Plus, Sparkles, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { assetUrl } from "@/lib/api";
 import type { Project, User } from "@/types/project";
@@ -29,9 +30,10 @@ export function HomeDashboard({
   return (
     <main className="min-h-screen px-4 py-4 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-[1500px] flex-col gap-5">
-        <header className="flex flex-col justify-between gap-4 border-b border-ink/10 pb-4 lg:flex-row lg:items-end">
+        <header className="glass-bar rounded-lg p-4 sm:p-5">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-lg border border-ink/10 bg-chalk px-3 py-1.5 text-sm font-medium text-steel">
+            <div className="eyebrow mb-3">
               <Box className="h-4 w-4" />
               RoomMorph AI
             </div>
@@ -51,6 +53,12 @@ export function HomeDashboard({
               <Plus className="h-4 w-4" />
               New redesign
             </button>
+          </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <HeaderMetric icon={<Images className="h-4 w-4" />} label="Saved rooms" value={loading ? "Loading" : String(projects.length)} />
+            <HeaderMetric icon={<Sparkles className="h-4 w-4" />} label="Scene-ready" value={String(projects.filter((item) => item.status === "scene_ready").length)} />
+            <HeaderMetric icon={<Clock3 className="h-4 w-4" />} label="Last update" value={projects[0] ? new Date(projects[0].updatedAt).toLocaleDateString() : "No projects"} />
           </div>
         </header>
 
@@ -114,14 +122,27 @@ function ProjectCard({
 }) {
   const concept = project.concepts.find((item) => item.id === project.selectedConceptId) ?? project.concepts[0];
   const imageUrl = assetUrl(concept?.previewUrl ?? project.sourceImage.url);
+  const budget = concept?.budget;
 
   return (
-    <article className="overflow-hidden rounded-lg border border-ink/10 bg-chalk shadow-soft">
+    <article className="group overflow-hidden rounded-lg border border-ink/10 bg-chalk shadow-soft transition duration-200 hover:-translate-y-0.5 hover:border-steel/35 hover:shadow-panel">
       <button className="block w-full text-left" type="button" onClick={onOpen}>
-        {imageUrl ? <img alt="" className="h-56 w-full object-cover" src={imageUrl} /> : null}
+        <div className="relative overflow-hidden">
+          {imageUrl ? <img alt="" className="h-56 w-full object-cover transition duration-300 group-hover:scale-[1.03]" src={imageUrl} /> : null}
+          <span className="absolute left-3 top-3 rounded-lg bg-ink/76 px-3 py-1 text-xs font-medium text-chalk backdrop-blur">
+            {project.status === "scene_ready" ? "3D ready" : "Concepts ready"}
+          </span>
+        </div>
         <div className="p-3">
           <p className="text-sm font-semibold text-ink">{project.brief.roomType}</p>
           <p className="mt-1 text-xs text-ink/55">{project.status === "scene_ready" ? "3D model ready" : "Concepts ready"} / {new Date(project.updatedAt).toLocaleDateString()}</p>
+          {budget ? (
+            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <CardMetric label="Budget" value={`INR ${Math.round(budget.minInr / 1000)}-${Math.round(budget.maxInr / 1000)}k`} />
+              <CardMetric label="Timeline" value={`${budget.timelineWeeks}w`} />
+              <CardMetric label="Fit" value={`${Math.round((concept?.scoreBreakdown.feasibility ?? concept.score) * 100)}%`} />
+            </div>
+          ) : null}
         </div>
       </button>
       <div className="border-t border-ink/10 p-3">
@@ -131,6 +152,24 @@ function ProjectCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function HeaderMetric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-ink/10 bg-chalk/80 px-3 py-3">
+      <p className="flex items-center gap-2 text-xs font-medium text-steel">{icon}{label}</p>
+      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
+    </div>
+  );
+}
+
+function CardMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-md border border-ink/10 bg-mist/45 px-2 py-1.5">
+      <span className="block text-[11px] font-medium text-ink/55">{label}</span>
+      <span className="mt-0.5 block truncate font-semibold text-ink">{value}</span>
+    </span>
   );
 }
 

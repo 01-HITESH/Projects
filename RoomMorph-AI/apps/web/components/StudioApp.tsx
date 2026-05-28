@@ -8,6 +8,7 @@ import { BeforeAfter } from "@/components/compare/BeforeAfter";
 import { ConceptGallery } from "@/components/concepts/ConceptGallery";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
 import { HomeDashboard } from "@/components/home/HomeDashboard";
+import { DesignIntelligence } from "@/components/insights/DesignIntelligence";
 import { SceneViewer } from "@/components/viewer/SceneViewer";
 import { UploadBrief } from "@/components/upload/UploadBrief";
 import {
@@ -118,6 +119,7 @@ export function StudioApp() {
       const updated = await selectConcept(project.id, conceptId);
       setProject(updated);
       setSelectedConceptId(conceptId);
+      setSelectedFurnitureId(updated.scene?.furniture[0]?.id ?? null);
       if (user) {
         await refreshHistory(user.id);
       }
@@ -223,7 +225,8 @@ export function StudioApp() {
   return (
     <main className="min-h-screen px-4 py-4 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-4">
-        <header className="flex flex-col justify-between gap-4 border-b border-ink/10 pb-4 lg:flex-row lg:items-end">
+        <header className="glass-bar rounded-lg p-4 sm:p-5">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div className="max-w-3xl">
             <div className="mb-3 flex flex-wrap gap-2">
               <button
@@ -234,22 +237,23 @@ export function StudioApp() {
                 <ArrowLeft className="h-4 w-4" />
                 Home
               </button>
-              <div className="inline-flex items-center gap-2 rounded-lg border border-ink/10 bg-chalk px-3 py-1.5 text-sm font-medium text-steel">
+              <div className="eyebrow">
                 <Home className="h-4 w-4" />
                 RoomMorph AI
               </div>
             </div>
-            <h1 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl">
-              Redesign a room, then explore it in 360
+            <h1 className="text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+              Design studio for concept, feasibility, and 360 walkthrough
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/66">
-              Upload a room photo, generate multiple interior concepts, choose one, and convert it into an interactive 3D scene.
+              Upload a room photo, generate ranked concepts, compare visuals, review the execution report, and customize the interactive room.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs text-ink/65 sm:min-w-[32rem]">
             <Metric label="Concepts" value={String(project?.concepts.length ?? 0)} />
             <Metric label="3D" value={project?.scene ? "Ready" : "Pending"} />
             <Metric label="History" value={historyLoading ? "Loading" : String(projects.length)} />
+          </div>
           </div>
         </header>
 
@@ -266,6 +270,8 @@ export function StudioApp() {
             />
 
             <BeforeAfter project={project} selectedConcept={selectedConcept} />
+
+            <DesignIntelligence concept={selectedConcept} scene={project?.scene ?? null} />
 
             <SceneViewer
               scene={project?.scene ?? null}
@@ -292,7 +298,7 @@ export function StudioApp() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ink/10 bg-chalk px-3 py-2">
+    <div className="rounded-lg border border-ink/10 bg-chalk/80 px-3 py-2">
       <p className="text-xs font-medium text-steel">{label}</p>
       <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
     </div>

@@ -60,24 +60,47 @@ def get_user(user_id: str) -> User:
 @router.post("/redesigns", response_model=RedesignResponse)
 async def create_redesigns(
     image: UploadFile = File(...),
+    afterImages: list[UploadFile] | None = File(None),
     userId: str = Form("demo-user"),
     roomType: str = Form("Living room"),
     themes: str = Form("modern,luxury,minimal,contemporary"),
     palette: str = Form(""),
     constraints: str = Form(""),
+    budgetRange: str = Form("Balanced"),
+    lifestyle: str = Form("Everyday family use"),
+    priority: str = Form("balanced"),
+    renderMode: str = Form("local"),
 ) -> RedesignResponse:
     project_id = uuid4().hex
     storage = ProjectStorage(project_id)
     upload = await storage.save_upload(image)
+    mode = renderMode.lower().strip()
+    if mode not in {"local", "ai", "manual"}:
+        mode = "local"
+    manual_preview_urls: list[str] = []
+    if afterImages:
+        for index, after_image in enumerate(afterImages[:5]):
+            saved_after = await storage.save_upload(after_image, f"manual-after-{index + 1}.jpg")
+            manual_preview_urls.append(saved_after.url)
+    if manual_preview_urls:
+        mode = "manual"
+    if mode == "manual" and not manual_preview_urls:
+        raise HTTPException(status_code=400, detail="Upload at least one real redesigned room photo for Manual after mode.")
     brief = DesignBrief(
         roomType=roomType,
         themes=_csv(themes),
         palette=_csv(palette),
         constraints=constraints,
+        budgetRange=budgetRange,
+        lifestyle=lifestyle,
+        priority=priority,
     )
-    concepts = redesign_generator.generate(upload.path, storage.root, project_id, brief)
+    try:
+        concepts = redesign_generator.generate(upload.path, storage.root, project_id, brief, mode, manual_preview_urls)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     concepts = [
-        concept.model_copy(update={"preview_url": storage.asset_url(concept.preview_url.replace("__ASSET__/", ""))})
+        concept.model_copy(update={"preview_url": _resolve_preview_url(storage, concept.preview_url)})
         for concept in concepts
     ]
     now = _now()
@@ -133,6 +156,9 @@ def select_concept(project_id: str, request: SelectConceptRequest) -> Project:
     project = storage.load_project()
     if not any(concept.id == request.concept_id for concept in project.concepts):
         raise HTTPException(status_code=404, detail="Concept not found.")
+    if project.selected_concept_id != request.concept_id:
+        project.scene = None
+        project.status = "concepts_ready"
     project.selected_concept_id = request.concept_id
     project.updated_at = _now()
     storage.save_project(project)
@@ -183,6 +209,12 @@ def get_comparison(project_id: str) -> ComparisonResponse:
 
 def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _resolve_preview_url(storage: ProjectStorage, preview_url: str) -> str:
+    if preview_url.startswith("__ASSET__/"):
+        return storage.asset_url(preview_url.replace("__ASSET__/", ""))
+    return preview_url
 
 
 def _now() -> str:

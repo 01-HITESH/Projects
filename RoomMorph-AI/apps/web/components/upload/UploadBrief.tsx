@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Check, Image, Loader2, WandSparkles, X } from "lucide-react";
+import { Check, Image, Images, Loader2, Sparkles, Upload, WandSparkles, X } from "lucide-react";
 
 import type { RedesignPayload } from "@/types/project";
 
@@ -14,16 +14,37 @@ type UploadBriefProps = {
 
 const roomTypes = ["Living room", "Bedroom", "Kitchen", "Home office"];
 const themeOptions = ["modern", "luxury", "minimal", "contemporary", "industrial"];
+const budgetOptions = ["Starter", "Balanced", "Premium", "Luxury"];
+const lifestyleOptions = ["Everyday family use", "Rental apartment", "Work from home", "Kids and pets", "Compact city home"];
+const priorityOptions = [
+  { value: "balanced", label: "Balanced" },
+  { value: "practicality", label: "Practicality" },
+  { value: "sustainability", label: "Sustainability" },
+  { value: "premium finish", label: "Premium finish" },
+];
 const defaultPalette = ["#f3f0e8", "#9aa58f", "#2f3430", "#c7b299"];
+const renderOptions = [
+  { value: "ai", label: "AI real photo", icon: Sparkles },
+  { value: "manual", label: "Upload real after", icon: Images },
+  { value: "local", label: "Demo renderer", icon: WandSparkles },
+] as const;
 
 export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefProps) {
   const inputId = useId();
+  const afterInputId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [afterImages, setAfterImages] = useState<File[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
+  const [afterPreviews, setAfterPreviews] = useState<string[]>([]);
+  const [renderMode, setRenderMode] = useState<"local" | "ai" | "manual">("ai");
   const [roomType, setRoomType] = useState(roomTypes[0]);
   const [themes, setThemes] = useState(themeOptions.slice(0, 4));
   const [palette, setPalette] = useState(defaultPalette);
+  const [budgetRange, setBudgetRange] = useState("Balanced");
+  const [lifestyle, setLifestyle] = useState(lifestyleOptions[0]);
+  const [priority, setPriority] = useState("balanced");
   const [constraints, setConstraints] = useState("Keep the room practical, brighter, and easier to maintain.");
+  const needsManualAfter = renderMode === "manual" && afterImages.length === 0;
 
   useEffect(() => {
     if (!file) {
@@ -35,12 +56,33 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  useEffect(() => {
+    const urls = afterImages.map((image) => URL.createObjectURL(image));
+    setAfterPreviews(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [afterImages]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
       return;
     }
-    await onSubmit({ userId, image: file, roomType, themes, palette, constraints });
+    const mode = afterImages.length ? "manual" : renderMode;
+    await onSubmit({
+      userId,
+      image: file,
+      renderMode: mode,
+      afterImages,
+      roomType,
+      themes,
+      palette,
+      constraints,
+      budgetRange,
+      lifestyle,
+      priority,
+    });
   }
 
   function toggleTheme(theme: string) {
@@ -54,7 +96,79 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
       <div>
         <p className="text-sm font-medium text-steel">Step 1</p>
         <h2 className="mt-1 text-xl font-semibold text-ink">Upload room photo</h2>
+        <p className="mt-2 text-sm leading-5 text-ink/58">Use AI real photo mode or upload real after photos for a realistic before/after.</p>
       </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-steel">Redesign image source</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {renderOptions.map((option) => {
+            const Icon = option.icon;
+            const active = renderMode === option.value;
+            return (
+              <button
+                className={[
+                  "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 text-sm font-medium transition",
+                  active ? "border-ink bg-ink text-chalk" : "border-ink/12 bg-chalk text-ink hover:border-steel",
+                ].join(" ")}
+                key={option.value}
+                type="button"
+                onClick={() => setRenderMode(option.value)}
+              >
+                <Icon className="h-4 w-4" />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {renderMode === "ai" ? (
+          <p className="text-xs leading-5 text-ink/55">Requires backend OPENAI_API_KEY. The app will show an error instead of using demo art if the key is missing.</p>
+        ) : null}
+        {renderMode === "local" ? (
+          <p className="text-xs leading-5 text-ink/55">Demo renderer is not a real redesigned room photo.</p>
+        ) : null}
+      </fieldset>
+
+      {renderMode === "manual" ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-sm font-medium text-steel" htmlFor={afterInputId}>Real redesigned after photos</label>
+            {afterImages.length ? (
+              <button
+                className="focus-ring inline-flex h-8 items-center gap-2 rounded-lg border border-ink/10 px-2 text-xs hover:bg-ink hover:text-chalk"
+                type="button"
+                onClick={() => setAfterImages([])}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <label className="focus-ring flex min-h-28 cursor-pointer items-center justify-center rounded-lg border border-dashed border-ink/18 bg-chalk/80 px-3 text-center text-sm text-ink/65 transition hover:border-steel/45 hover:bg-chalk" htmlFor={afterInputId}>
+            <span className="inline-flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Upload up to 5 real redesigned room photos
+            </span>
+          </label>
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            id={afterInputId}
+            multiple
+            type="file"
+            onChange={(event) => setAfterImages(Array.from(event.target.files ?? []).slice(0, 5))}
+          />
+          {afterPreviews.length ? (
+            <div className="grid grid-cols-3 gap-2">
+              {afterPreviews.map((url) => (
+                <img alt="" className="h-20 rounded-lg object-cover" key={url} src={url} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs leading-5 text-ink/55">Required for real before/after without AI. Photos replace concept images in order.</p>
+          )}
+        </div>
+      ) : null}
 
       <div>
         <div className="mb-2 flex items-center justify-between">
@@ -70,7 +184,7 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
             </button>
           ) : null}
         </div>
-        <label className="focus-ring flex min-h-48 cursor-pointer overflow-hidden rounded-lg border border-dashed border-ink/18 bg-chalk/70" htmlFor={inputId}>
+        <label className="focus-ring flex min-h-48 cursor-pointer overflow-hidden rounded-lg border border-dashed border-ink/18 bg-chalk/80 transition hover:border-steel/45 hover:bg-chalk" htmlFor={inputId}>
           {preview ? (
             <img alt="" className="h-48 w-full object-cover" src={preview} />
           ) : (
@@ -91,10 +205,26 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
         />
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm font-medium text-steel">Room type</span>
+          <select className="field focus-ring w-full px-3 text-sm" value={roomType} onChange={(event) => setRoomType(event.target.value)}>
+            {roomTypes.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-sm font-medium text-steel">Budget range</span>
+          <select className="field focus-ring w-full px-3 text-sm" value={budgetRange} onChange={(event) => setBudgetRange(event.target.value)}>
+            {budgetOptions.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+      </div>
+
       <label className="space-y-2">
-        <span className="text-sm font-medium text-steel">Room type</span>
-        <select className="focus-ring h-11 w-full rounded-lg border border-ink/12 bg-chalk px-3 text-sm" value={roomType} onChange={(event) => setRoomType(event.target.value)}>
-          {roomTypes.map((item) => <option key={item}>{item}</option>)}
+        <span className="text-sm font-medium text-steel">Lifestyle</span>
+        <select className="field focus-ring w-full px-3 text-sm" value={lifestyle} onChange={(event) => setLifestyle(event.target.value)}>
+          {lifestyleOptions.map((item) => <option key={item}>{item}</option>)}
         </select>
       </label>
 
@@ -121,13 +251,35 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
         </div>
       </fieldset>
 
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-steel">Decision priority</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {priorityOptions.map((item) => {
+            const active = priority === item.value;
+            return (
+              <button
+                className={[
+                  "focus-ring inline-flex min-h-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition",
+                  active ? "border-ink bg-ink text-chalk" : "border-ink/12 bg-chalk text-ink hover:border-steel",
+                ].join(" ")}
+                key={item.value}
+                type="button"
+                onClick={() => setPriority(item.value)}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <div className="space-y-2">
         <span className="text-sm font-medium text-steel">Palette</span>
         <div className="grid grid-cols-4 gap-2">
           {palette.map((color, index) => (
             <input
               aria-label={`Palette color ${index + 1}`}
-              className="h-10 w-full cursor-pointer rounded-lg border border-ink/12 bg-chalk p-1"
+              className="h-10 w-full cursor-pointer rounded-lg border border-ink/12 bg-chalk p-1 shadow-sm"
               key={`${color}-${index}`}
               type="color"
               value={color}
@@ -143,14 +295,14 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
 
       <label className="space-y-2">
         <span className="text-sm font-medium text-steel">Design notes</span>
-        <textarea className="focus-ring min-h-24 resize-none rounded-lg border border-ink/12 bg-chalk px-3 py-3 text-sm" value={constraints} onChange={(event) => setConstraints(event.target.value)} />
+        <textarea className="field focus-ring min-h-24 w-full resize-none px-3 py-3 text-sm" value={constraints} onChange={(event) => setConstraints(event.target.value)} />
       </label>
 
       {error ? <div className="rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-sm">{error}</div> : null}
 
-      <button className="focus-ring mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-chalk transition hover:bg-steel disabled:cursor-not-allowed disabled:bg-ink/35" disabled={!file || loading} type="submit">
+      <button className="focus-ring mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-chalk transition hover:bg-steel disabled:cursor-not-allowed disabled:bg-ink/35" disabled={!file || needsManualAfter || loading} type="submit">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-        Generate design concepts
+        Generate real before/after
       </button>
     </form>
   );

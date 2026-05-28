@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.models.schemas import DesignBrief, DesignConcept, FurniturePrimitive, LightingSpec, MaterialSpec, PrimitivePart, SceneDocument, SurfacePrimitive
+from app.models.schemas import DesignBrief, DesignConcept, FurniturePrimitive, LightingSpec, MaterialSpec, PrimitivePart, SceneAnalytics, SceneDocument, SurfacePrimitive
 
 
 class SceneBuilder:
@@ -24,6 +24,7 @@ class SceneBuilder:
         ]
 
         furniture = self._furniture(brief.room_type.lower(), width, depth, accent, wood, metal, stone)
+        analytics = _analytics(brief, concept, width, depth, furniture)
         return SceneDocument(
             id=project_id,
             roomType=brief.room_type,
@@ -32,6 +33,7 @@ class SceneBuilder:
             surfaces=surfaces,
             furniture=furniture,
             lighting=LightingSpec(ambient=0.58, key=1.18 if concept.theme != "industrial" else 1.0, temperature=4200),
+            analytics=analytics,
             cameraPresets=[
                 {"position": [5.2, 3.2, 5.5], "target": [0, 1.1, 0]},
                 {"position": [0, 1.55, 4.4], "target": [0, 1.25, 0]},
@@ -212,3 +214,68 @@ def _shelf(id_: str, position: list[float], wood: MaterialSpec) -> FurniturePrim
         _part("vase", [-0.16, 1.18, 0.04], [0.12, 0.24, 0.12], _mat("ceramic", "matte ceramic", "#f4efe4", 0.82), "cylinder"),
         _part("books", [0.18, 0.56, 0.05], [0.26, 0.18, 0.18], _mat("books", "stacked books", "#58636b", 0.75)),
     ])
+
+
+def _analytics(
+    brief: DesignBrief,
+    concept: DesignConcept,
+    width: float,
+    depth: float,
+    furniture: list[FurniturePrimitive],
+) -> SceneAnalytics:
+    floor_area = round(width * depth, 1)
+    occupied = 0.0
+    for item in furniture:
+        if item.kind in {"rug"}:
+            occupied += item.dimensions[0] * item.dimensions[2] * 0.18
+        elif item.kind in {"cabinet", "storage", "console", "shelf"}:
+            occupied += item.dimensions[0] * item.dimensions[2] * 0.55
+        else:
+            occupied += item.dimensions[0] * item.dimensions[2] * 0.75
+    walkable_area = round(max(floor_area - occupied, floor_area * 0.32), 1)
+    clearance_notes = [
+        f"Estimated open circulation: {walkable_area} sqm of {floor_area} sqm.",
+        "Primary path keeps at least 750 mm movement clearance in the generated layout.",
+        "Large furniture is anchored to walls to keep the center usable.",
+    ]
+    if "kitchen" in brief.room_type.lower():
+        clearance_notes.append("Island placement reserves a working aisle for cooking and serving.")
+    elif "bed" in brief.room_type.lower():
+        clearance_notes.append("Bedside circulation is preserved on both sides for daily use.")
+
+    return SceneAnalytics(
+        floorArea=floor_area,
+        walkableArea=walkable_area,
+        budgetEstimate=concept.budget,
+        scores=concept.score_breakdown,
+        materialSchedule=concept.material_plan,
+        clearanceNotes=clearance_notes,
+        lightingPlan=_lighting_plan(concept.theme),
+        sustainabilityNotes=_sustainability_notes(brief, concept.theme),
+    )
+
+
+def _lighting_plan(theme: str) -> list[str]:
+    base = [
+        "Ambient ceiling wash at 4000K for neutral room color reading.",
+        "Warm task or accent lights near seating and storage zones.",
+        "Soft shadow control to keep the 3D scene visually readable.",
+    ]
+    if theme == "luxury":
+        base.append("Add dimmable cove lighting to create an evening presentation mode.")
+    elif theme == "industrial":
+        base.append("Use warmer bulbs to offset dark metal and textured surfaces.")
+    return base
+
+
+def _sustainability_notes(brief: DesignBrief, theme: str) -> list[str]:
+    notes = [
+        "Reuse existing large furniture where dimensions match the generated plan.",
+        "Prefer low-VOC wall paint and water-based wood finishes.",
+        "Choose modular pieces so damaged components can be replaced individually.",
+    ]
+    if brief.priority.lower() == "sustainability":
+        notes.insert(0, "Sustainability is treated as a ranking priority for this concept.")
+    if theme in {"minimal", "modern"}:
+        notes.append("The restrained palette reduces the chance of early style fatigue.")
+    return notes

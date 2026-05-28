@@ -9,7 +9,8 @@ import {
   RoundedBox,
 } from "@react-three/drei";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { Box, Lightbulb, Save, Sun } from "lucide-react";
+import { Box, Camera, Eye, Lightbulb, Move3D, Save, Sun } from "lucide-react";
+import { useState } from "react";
 
 import type {
   FurniturePrimitive,
@@ -37,6 +38,9 @@ export function SceneViewer({
   onUpdateScene,
   onSave,
 }: SceneViewerProps) {
+  const [showGrid, setShowGrid] = useState(true);
+  const [showMeasurements, setShowMeasurements] = useState(true);
+  const [cameraPreset, setCameraPreset] = useState(0);
   const selected = scene?.furniture.find((item) => item.id === selectedFurnitureId) ?? null;
 
   if (!scene) {
@@ -53,11 +57,15 @@ export function SceneViewer({
     );
   }
 
+  const activeCamera = scene.cameraPresets[cameraPreset] ?? scene.cameraPresets[0];
+  const floorArea = scene.analytics?.floorArea ?? scene.dimensions.width * scene.dimensions.depth;
+  const walkableArea = scene.analytics?.walkableArea ?? 0;
+
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="relative min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-[#dfe3dd] shadow-soft">
+      <div className="relative min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-[#d9e3df] shadow-panel">
         <Canvas dpr={[1, 1.75]} shadows>
-          <PerspectiveCamera makeDefault fov={45} position={[5.3, 3.3, 5.6]} />
+          <PerspectiveCamera makeDefault fov={45} position={activeCamera?.position ?? [5.3, 3.3, 5.6]} />
           <color args={["#dfe3dd"]} attach="background" />
           <fog args={["#dfe3dd", 8, 15]} attach="fog" />
           <ambientLight intensity={scene.lighting.ambient} />
@@ -95,20 +103,29 @@ export function SceneViewer({
             resolution={1024}
             scale={9}
           />
-          <Grid
-            args={[scene.dimensions.width + 1, scene.dimensions.depth + 1]}
-            cellColor="#a9afa8"
-            cellSize={0.5}
-            fadeDistance={10}
-            position={[0, 0.006, 0]}
-            sectionColor="#748475"
-            sectionSize={1}
-          />
+          {showGrid ? (
+            <Grid
+              args={[scene.dimensions.width + 1, scene.dimensions.depth + 1]}
+              cellColor="#a9afa8"
+              cellSize={0.5}
+              fadeDistance={10}
+              position={[0, 0.006, 0]}
+              sectionColor="#748475"
+              sectionSize={1}
+            />
+          ) : null}
           <Environment preset="apartment" />
-          <OrbitControls enableDamping maxPolarAngle={Math.PI / 2.08} target={[0, 1.1, 0]} />
+          <OrbitControls enableDamping maxPolarAngle={Math.PI / 2.08} target={activeCamera?.target ?? [0, 1.1, 0]} />
         </Canvas>
-        <div className="absolute left-4 top-4 rounded-lg border border-ink/10 bg-chalk/90 px-3 py-2 text-sm shadow-soft backdrop-blur">
-          360 walkthrough - {scene.theme}
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          <div className="rounded-lg border border-ink/10 bg-chalk/90 px-3 py-2 text-sm font-medium shadow-soft backdrop-blur">
+            360 walkthrough - {scene.theme}
+          </div>
+          {showMeasurements ? (
+            <div className="rounded-lg border border-ink/10 bg-chalk/90 px-3 py-2 text-sm font-medium shadow-soft backdrop-blur">
+              {scene.dimensions.width}m x {scene.dimensions.depth}m / {floorArea.toFixed(1)} sqm
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -116,6 +133,61 @@ export function SceneViewer({
         <div>
           <p className="text-sm font-medium text-steel">Customize</p>
           <h2 className="mt-1 text-xl font-semibold text-ink">Live controls</h2>
+          <p className="mt-2 text-sm leading-5 text-ink/58">Tune material, lighting, camera, and layout review settings.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className={[
+              "focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg border text-sm font-medium",
+              showGrid ? "border-ink bg-ink text-chalk" : "border-ink/10 bg-chalk hover:bg-ink hover:text-chalk",
+            ].join(" ")}
+            type="button"
+            onClick={() => setShowGrid((current) => !current)}
+          >
+            <Move3D className="h-4 w-4" />
+            Grid
+          </button>
+          <button
+            className={[
+              "focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg border text-sm font-medium",
+              showMeasurements ? "border-ink bg-ink text-chalk" : "border-ink/10 bg-chalk hover:bg-ink hover:text-chalk",
+            ].join(" ")}
+            type="button"
+            onClick={() => setShowMeasurements((current) => !current)}
+          >
+            <Eye className="h-4 w-4" />
+            Metrics
+          </button>
+        </div>
+
+        <div className="rounded-lg border border-ink/10 bg-chalk p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
+            <Camera className="h-4 w-4" />
+            Camera view
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {scene.cameraPresets.map((preset, index) => (
+              <button
+                className={[
+                  "focus-ring h-9 rounded-lg border px-2 text-sm font-medium",
+                  cameraPreset === index ? "border-ink bg-ink text-chalk" : "border-ink/10 bg-mist/35 hover:border-steel",
+                ].join(" ")}
+                key={`${preset.position.join("-")}-${index}`}
+                type="button"
+                onClick={() => setCameraPreset(index)}
+              >
+                View {index + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <SceneMetric label="Room" value={`${floorArea.toFixed(1)} sqm`} />
+          <SceneMetric label="Open area" value={walkableArea ? `${walkableArea.toFixed(1)} sqm` : "Pending"} />
+          <SceneMetric label="Furniture" value={String(scene.furniture.length)} />
+          <SceneMetric label="Light temp" value={`${scene.lighting.temperature}K`} />
         </div>
 
         <div className="space-y-2">
@@ -210,6 +282,15 @@ export function SceneViewer({
         </button>
       </aside>
     </section>
+  );
+}
+
+function SceneMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-ink/10 bg-chalk px-3 py-2">
+      <p className="text-xs font-medium text-steel">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
+    </div>
   );
 }
 

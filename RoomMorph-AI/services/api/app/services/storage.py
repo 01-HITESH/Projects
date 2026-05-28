@@ -37,7 +37,7 @@ class ProjectStorage:
         relative = self.asset_path(filename).relative_to(settings.storage_root).as_posix()
         return f"{settings.public_base_url.rstrip('/')}/static/{relative}"
 
-    async def save_upload(self, upload: UploadFile) -> StoredUpload:
+    async def save_upload(self, upload: UploadFile, filename: str = "source.jpg") -> StoredUpload:
         if upload.content_type not in ALLOWED_TYPES:
             raise HTTPException(status_code=400, detail="Upload must be JPEG, PNG, or WebP.")
 
@@ -52,9 +52,9 @@ class ProjectStorage:
             raise HTTPException(status_code=400, detail="Image could not be decoded.") from exc
 
         image.thumbnail((1800, 1800), Image.Resampling.LANCZOS)
-        path = self.asset_path("source.jpg")
+        path = self.asset_path(filename)
         image.save(path, format="JPEG", quality=88, optimize=True)
-        return StoredUpload(path=path, url=self.asset_url("source.jpg"), width=image.width, height=image.height)
+        return StoredUpload(path=path, url=self.asset_url(filename), width=image.width, height=image.height)
 
     def save_project(self, project: Project) -> None:
         self.asset_path("project.json").write_text(project.model_dump_json(by_alias=True), encoding="utf-8")

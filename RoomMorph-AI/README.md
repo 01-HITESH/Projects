@@ -87,6 +87,21 @@ The default frontend expects the backend at `http://localhost:8000`. To use a di
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
+The redesign image source can run in three modes from the upload form:
+
+- `AI real photo` uses OpenAI image editing and requires `OPENAI_API_KEY` on the backend.
+- `Upload real after` lets you upload real redesigned room photos and uses them as concept images.
+- `Demo renderer` keeps the deterministic offline renderer and is not a real redesigned room photo.
+
+Backend `.env` example:
+
+```text
+OPENAI_API_KEY=your_key_here
+OPENAI_IMAGE_MODEL=gpt-image-1
+```
+
+AI real-photo mode returns an error if the API key is missing or image generation fails. Use `Upload real after` when you already have real redesigned photos.
+
 The backend stores generated uploads and project JSON under `services/api/storage`. This folder is local runtime data and is ignored by Git.
 
 ## Production Build Check
