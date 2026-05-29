@@ -11,6 +11,7 @@ import { HomeDashboard } from "@/components/home/HomeDashboard";
 import { DesignIntelligence } from "@/components/insights/DesignIntelligence";
 import { SceneViewer } from "@/components/viewer/SceneViewer";
 import { UploadBrief } from "@/components/upload/UploadBrief";
+import { WorkflowStrategy } from "@/components/strategy/WorkflowStrategy";
 import {
   createRedesigns,
   createScene,
@@ -272,6 +273,8 @@ export function StudioApp() {
             <BeforeAfter project={project} selectedConcept={selectedConcept} />
 
             <DesignIntelligence concept={selectedConcept} scene={project?.scene ?? null} />
+
+            <WorkflowStrategy />
 
             <SceneViewer
               scene={project?.scene ?? null}

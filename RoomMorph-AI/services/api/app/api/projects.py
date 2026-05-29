@@ -60,7 +60,6 @@ def get_user(user_id: str) -> User:
 @router.post("/redesigns", response_model=RedesignResponse)
 async def create_redesigns(
     image: UploadFile = File(...),
-    afterImages: list[UploadFile] | None = File(None),
     userId: str = Form("demo-user"),
     roomType: str = Form("Living room"),
     themes: str = Form("modern,luxury,minimal,contemporary"),
@@ -69,23 +68,10 @@ async def create_redesigns(
     budgetRange: str = Form("Balanced"),
     lifestyle: str = Form("Everyday family use"),
     priority: str = Form("balanced"),
-    renderMode: str = Form("local"),
 ) -> RedesignResponse:
     project_id = uuid4().hex
     storage = ProjectStorage(project_id)
     upload = await storage.save_upload(image)
-    mode = renderMode.lower().strip()
-    if mode not in {"local", "ai", "manual"}:
-        mode = "local"
-    manual_preview_urls: list[str] = []
-    if afterImages:
-        for index, after_image in enumerate(afterImages[:5]):
-            saved_after = await storage.save_upload(after_image, f"manual-after-{index + 1}.jpg")
-            manual_preview_urls.append(saved_after.url)
-    if manual_preview_urls:
-        mode = "manual"
-    if mode == "manual" and not manual_preview_urls:
-        raise HTTPException(status_code=400, detail="Upload at least one real redesigned room photo for Manual after mode.")
     brief = DesignBrief(
         roomType=roomType,
         themes=_csv(themes),
@@ -96,7 +82,7 @@ async def create_redesigns(
         priority=priority,
     )
     try:
-        concepts = redesign_generator.generate(upload.path, storage.root, project_id, brief, mode, manual_preview_urls)
+        concepts = redesign_generator.generate(upload.path, storage.root, project_id, brief)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     concepts = [

@@ -145,8 +145,6 @@ export type RedesignResponse = {
 export type RedesignPayload = {
   userId: string;
   image: File;
-  renderMode: "local" | "ai" | "manual";
-  afterImages: File[];
   roomType: string;
   themes: string[];
   palette: string[];

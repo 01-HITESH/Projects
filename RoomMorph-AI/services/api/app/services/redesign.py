@@ -5,7 +5,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from app.models.schemas import BudgetEstimate, DesignBrief, DesignConcept, MaterialPlanItem, ScoreBreakdown
-from app.services.ai_image import AiImageGenerator
 
 
 THEME_KITS: dict[str, dict[str, object]] = {
@@ -54,12 +53,8 @@ class RedesignGenerator:
         output_dir: Path,
         project_id: str,
         brief: DesignBrief,
-        render_mode: str = "local",
-        manual_preview_urls: list[str] | None = None,
     ) -> list[DesignConcept]:
         themes = brief.themes or ["modern", "luxury", "minimal", "contemporary"]
-        ai_generator = AiImageGenerator()
-        manual_urls = manual_preview_urls or []
         concepts: list[DesignConcept] = []
         for index, theme in enumerate(themes[:5]):
             key = theme.lower().strip()
@@ -69,13 +64,7 @@ class RedesignGenerator:
             if brief.palette:
                 palette = (brief.palette + palette)[:4]
             preview_url = f"__ASSET__/{filename}"
-            if render_mode == "manual" and index < len(manual_urls):
-                preview_url = manual_urls[index]
-            else:
-                if render_mode == "ai":
-                    ai_generator.render_edit_or_raise(source_path, output_dir / filename, brief, key, palette)
-                else:
-                    self._render_concept(source_path, output_dir / filename, brief.room_type, key, palette)
+            self._render_concept(source_path, output_dir / filename, brief.room_type, key, palette)
             concepts.append(
                 DesignConcept(
                     id=f"{project_id}-{index + 1}",

@@ -35,9 +35,7 @@ export async function login(email: string, name: string): Promise<User> {
 export async function createRedesigns(payload: RedesignPayload): Promise<RedesignResponse> {
   const formData = new FormData();
   formData.append("image", payload.image);
-  payload.afterImages.forEach((image) => formData.append("afterImages", image));
   formData.append("userId", payload.userId);
-  formData.append("renderMode", payload.renderMode);
   formData.append("roomType", payload.roomType);
   formData.append("themes", payload.themes.join(","));
   formData.append("palette", payload.palette.join(","));

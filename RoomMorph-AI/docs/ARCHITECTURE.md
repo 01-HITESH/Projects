@@ -4,7 +4,7 @@
 [Next.js Upload UI]
   -> [FastAPI API]
     -> image validation + local asset storage
-    -> AI-style redesign generator
+    -> deterministic redesign generator
     -> design variant gallery
     -> design intelligence report
     -> selected design scene builder
@@ -16,9 +16,10 @@
     -> before/after comparison
 ```
 
-The prototype uses deterministic local fallbacks in place of external Stable Diffusion,
+The prototype uses a deterministic local renderer in place of external Stable Diffusion,
 ControlNet, segmentation, and 3D asset generation services. The API boundaries are
-designed so hosted model calls can replace these services later.
+designed so hosted model calls can replace these services later if that product decision
+is revisited.
 
 The current local intelligence layer ranks concepts with style, feasibility, budget,
 maintenance, and sustainability scores. It also generates an estimated INR budget,

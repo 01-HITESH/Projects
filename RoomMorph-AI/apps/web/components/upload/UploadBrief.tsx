@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Check, Image, Images, Loader2, Sparkles, Upload, WandSparkles, X } from "lucide-react";
+import { Check, Image, Loader2, WandSparkles, X } from "lucide-react";
 
 import type { RedesignPayload } from "@/types/project";
 
@@ -23,20 +23,11 @@ const priorityOptions = [
   { value: "premium finish", label: "Premium finish" },
 ];
 const defaultPalette = ["#f3f0e8", "#9aa58f", "#2f3430", "#c7b299"];
-const renderOptions = [
-  { value: "ai", label: "AI real photo", icon: Sparkles },
-  { value: "manual", label: "Upload real after", icon: Images },
-  { value: "local", label: "Demo renderer", icon: WandSparkles },
-] as const;
 
 export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefProps) {
   const inputId = useId();
-  const afterInputId = useId();
   const [file, setFile] = useState<File | null>(null);
-  const [afterImages, setAfterImages] = useState<File[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
-  const [afterPreviews, setAfterPreviews] = useState<string[]>([]);
-  const [renderMode, setRenderMode] = useState<"local" | "ai" | "manual">("ai");
   const [roomType, setRoomType] = useState(roomTypes[0]);
   const [themes, setThemes] = useState(themeOptions.slice(0, 4));
   const [palette, setPalette] = useState(defaultPalette);
@@ -44,7 +35,6 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
   const [lifestyle, setLifestyle] = useState(lifestyleOptions[0]);
   const [priority, setPriority] = useState("balanced");
   const [constraints, setConstraints] = useState("Keep the room practical, brighter, and easier to maintain.");
-  const needsManualAfter = renderMode === "manual" && afterImages.length === 0;
 
   useEffect(() => {
     if (!file) {
@@ -56,25 +46,14 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  useEffect(() => {
-    const urls = afterImages.map((image) => URL.createObjectURL(image));
-    setAfterPreviews(urls);
-    return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [afterImages]);
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
       return;
     }
-    const mode = afterImages.length ? "manual" : renderMode;
     await onSubmit({
       userId,
       image: file,
-      renderMode: mode,
-      afterImages,
       roomType,
       themes,
       palette,
@@ -96,79 +75,8 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
       <div>
         <p className="text-sm font-medium text-steel">Step 1</p>
         <h2 className="mt-1 text-xl font-semibold text-ink">Upload room photo</h2>
-        <p className="mt-2 text-sm leading-5 text-ink/58">Use AI real photo mode or upload real after photos for a realistic before/after.</p>
+        <p className="mt-2 text-sm leading-5 text-ink/58">Generate local concept directions from a 2D room image and a practical design brief.</p>
       </div>
-
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-steel">Redesign image source</legend>
-        <div className="grid grid-cols-3 gap-2">
-          {renderOptions.map((option) => {
-            const Icon = option.icon;
-            const active = renderMode === option.value;
-            return (
-              <button
-                className={[
-                  "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 text-sm font-medium transition",
-                  active ? "border-ink bg-ink text-chalk" : "border-ink/12 bg-chalk text-ink hover:border-steel",
-                ].join(" ")}
-                key={option.value}
-                type="button"
-                onClick={() => setRenderMode(option.value)}
-              >
-                <Icon className="h-4 w-4" />
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-        {renderMode === "ai" ? (
-          <p className="text-xs leading-5 text-ink/55">Requires backend OPENAI_API_KEY. The app will show an error instead of using demo art if the key is missing.</p>
-        ) : null}
-        {renderMode === "local" ? (
-          <p className="text-xs leading-5 text-ink/55">Demo renderer is not a real redesigned room photo.</p>
-        ) : null}
-      </fieldset>
-
-      {renderMode === "manual" ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <label className="text-sm font-medium text-steel" htmlFor={afterInputId}>Real redesigned after photos</label>
-            {afterImages.length ? (
-              <button
-                className="focus-ring inline-flex h-8 items-center gap-2 rounded-lg border border-ink/10 px-2 text-xs hover:bg-ink hover:text-chalk"
-                type="button"
-                onClick={() => setAfterImages([])}
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear
-              </button>
-            ) : null}
-          </div>
-          <label className="focus-ring flex min-h-28 cursor-pointer items-center justify-center rounded-lg border border-dashed border-ink/18 bg-chalk/80 px-3 text-center text-sm text-ink/65 transition hover:border-steel/45 hover:bg-chalk" htmlFor={afterInputId}>
-            <span className="inline-flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload up to 5 real redesigned room photos
-            </span>
-          </label>
-          <input
-            accept="image/jpeg,image/png,image/webp"
-            className="sr-only"
-            id={afterInputId}
-            multiple
-            type="file"
-            onChange={(event) => setAfterImages(Array.from(event.target.files ?? []).slice(0, 5))}
-          />
-          {afterPreviews.length ? (
-            <div className="grid grid-cols-3 gap-2">
-              {afterPreviews.map((url) => (
-                <img alt="" className="h-20 rounded-lg object-cover" key={url} src={url} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs leading-5 text-ink/55">Required for real before/after without AI. Photos replace concept images in order.</p>
-          )}
-        </div>
-      ) : null}
 
       <div>
         <div className="mb-2 flex items-center justify-between">
@@ -300,9 +208,9 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
 
       {error ? <div className="rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-sm">{error}</div> : null}
 
-      <button className="focus-ring mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-chalk transition hover:bg-steel disabled:cursor-not-allowed disabled:bg-ink/35" disabled={!file || needsManualAfter || loading} type="submit">
+      <button className="focus-ring mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-chalk transition hover:bg-steel disabled:cursor-not-allowed disabled:bg-ink/35" disabled={!file || loading} type="submit">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-        Generate real before/after
+        Generate concepts
       </button>
     </form>
   );
