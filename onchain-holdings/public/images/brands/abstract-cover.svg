@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Abstract Chain cover">
+  <rect width="1200" height="900" fill="#2c3140"/>
+  <g fill="none" stroke-width="34">
+    <path d="M240 610 480 290h240l240 320H720L600 450 480 610z" stroke="#b6bac5"/>
+    <path d="M330 690h540" stroke="#ffffff"/>
+    <path d="M420 235h360" stroke="#454c5e"/>
+  </g>
+  <circle cx="600" cy="450" r="74" fill="#383e4e"/>
+</svg>
