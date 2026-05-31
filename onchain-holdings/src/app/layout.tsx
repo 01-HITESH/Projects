@@ -4,6 +4,7 @@ import "./globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { NavBar } from "@/components/layout/NavBar";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 
 export const metadata: Metadata = {
@@ -21,17 +22,21 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const fontMode = process.env.NEXT_PUBLIC_ENABLE_SELF_HOSTED_FONTS === "true" ? "self-hosted" : undefined;
+
   return (
     <html lang="en">
-      <body>
-        <ScrollProgress />
-        <NavBar />
-        <PageTransition>
-          <main id="main" className="min-h-screen pt-20">
-            {children}
-          </main>
-        </PageTransition>
-        <Footer />
+      <body data-fonts={fontMode}>
+        <AppProviders>
+          <ScrollProgress />
+          <NavBar />
+          <PageTransition>
+            <main id="main" className="min-h-screen pt-20">
+              {children}
+            </main>
+          </PageTransition>
+          <Footer />
+        </AppProviders>
       </body>
     </html>
   );

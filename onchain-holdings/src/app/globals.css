@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Onchain Display";
+  src:
+    url("/fonts/onchain-display.woff2") format("woff2"),
+    url("/fonts/onchain-display.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400 700;
+}
+
+@font-face {
+  font-family: "Onchain Sans";
+  src:
+    url("/fonts/onchain-sans.woff2") format("woff2"),
+    url("/fonts/onchain-sans.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400 800;
+}
+
+@font-face {
+  font-family: "Onchain Mono";
+  src:
+    url("/fonts/onchain-mono.woff2") format("woff2"),
+    url("/fonts/onchain-mono.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400 700;
+}
+
 :root {
   --color-bg: #1e2330;
   --color-surface: #2c3140;
@@ -21,6 +51,12 @@
   --text-body: clamp(1rem, 1.5vw, 1.125rem);
   --section-y: clamp(4rem, 8vw, 12rem);
   --container-x: clamp(1.5rem, 5vw, 6rem);
+}
+
+[data-fonts="self-hosted"] {
+  --font-display: "Onchain Display", "Playfair Display", "Editorial New", serif;
+  --font-body: "Onchain Sans", "Syne", sans-serif;
+  --font-mono: "Onchain Mono", "JetBrains Mono", monospace;
 }
 
 * {
