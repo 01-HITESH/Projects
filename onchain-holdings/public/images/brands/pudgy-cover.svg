@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Pudgy Penguins abstract cover">
-  <rect width="1200" height="900" fill="#2c3140"/>
-  <circle cx="600" cy="410" r="245" fill="#b6bac5"/>
-  <ellipse cx="600" cy="640" rx="210" ry="125" fill="#383e4e"/>
-  <circle cx="510" cy="375" r="28" fill="#1e2330"/>
-  <circle cx="690" cy="375" r="28" fill="#1e2330"/>
-  <path d="M560 465h80l-40 48z" fill="#ffffff"/>
-  <path d="M90 760c230-90 430-90 610 0s318 90 410 0v140H90z" fill="#454c5e"/>
-</svg>
