@@ -9,8 +9,8 @@ type BeforeAfterProps = {
 };
 
 export function BeforeAfter({ project, selectedConcept }: BeforeAfterProps) {
-  const before = assetUrl(project?.sourceImage.url);
-  const after = assetUrl(selectedConcept?.previewUrl);
+  const before = withVersion(assetUrl(project?.sourceImage.url), project?.sourceImage.id);
+  const after = withVersion(assetUrl(selectedConcept?.previewUrl), selectedConcept?.id);
 
   return (
     <section className="panel rounded-lg p-4">
@@ -25,6 +25,14 @@ export function BeforeAfter({ project, selectedConcept }: BeforeAfterProps) {
       </div>
     </section>
   );
+}
+
+function withVersion(url: string | null, version: string | null | undefined): string | null {
+  if (!url || !version) {
+    return url;
+  }
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${encodeURIComponent(version)}`;
 }
 
 function Frame({ label, url }: { label: string; url: string | null }) {

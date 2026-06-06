@@ -93,14 +93,15 @@ class RedesignGenerator:
         palette: list[str],
     ) -> None:
         base = ImageOps.exif_transpose(Image.open(source_path)).convert("RGB")
-        image = ImageEnhance.Color(base).enhance(0.82)
-        image = ImageEnhance.Contrast(image).enhance(1.04)
-        image = ImageEnhance.Brightness(image).enhance(1.03)
+        base = _prepare_render_canvas(base)
+        image = ImageEnhance.Color(base).enhance(0.94)
+        image = ImageEnhance.Contrast(image).enhance(1.03)
+        image = ImageEnhance.Brightness(image).enhance(1.02)
         width, height = image.size
-        floor_y = int(height * 0.61)
+        floor_y = _estimate_floor_line(image)
 
-        wall = _rgba(palette[0], 118)
-        floor = _rgba(palette[1], 124)
+        wall = _rgba(palette[0], 72)
+        floor = _rgba(palette[1], 88)
         accent = _rgba(palette[2], 235)
         secondary = _rgba(palette[3] if len(palette) > 3 else palette[1], 232)
 
@@ -123,24 +124,26 @@ class RedesignGenerator:
         theme: str,
     ) -> Image.Image:
         overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay, "RGBA")
-        draw.rectangle((0, 0, width, floor_y), fill=wall)
-        draw.polygon([(0, floor_y), (width, floor_y), (width, height), (0, height)], fill=floor)
 
         wall_texture = _texture_layer(image.size, wall[:3], 16, 20)
         floor_texture = _texture_layer(image.size, floor[:3], 26, 26)
         wall_mask = Image.new("L", image.size, 0)
         floor_mask = Image.new("L", image.size, 0)
         mask_draw = ImageDraw.Draw(wall_mask)
-        mask_draw.rectangle((0, 0, width, floor_y), fill=56)
+        mask_draw.rectangle((0, 0, width, floor_y + max(4, height // 90)), fill=wall[3])
         mask_draw = ImageDraw.Draw(floor_mask)
-        mask_draw.polygon([(0, floor_y), (width, floor_y), (width, height), (0, height)], fill=74)
-        overlay = Image.alpha_composite(overlay, Image.composite(wall_texture, Image.new("RGBA", image.size, (0, 0, 0, 0)), wall_mask))
-        overlay = Image.alpha_composite(overlay, Image.composite(floor_texture, Image.new("RGBA", image.size, (0, 0, 0, 0)), floor_mask))
+        mask_draw.polygon([(0, floor_y - max(2, height // 140)), (width, floor_y - max(2, height // 140)), (width, height), (0, height)], fill=floor[3])
+        wall_mask = wall_mask.filter(ImageFilter.GaussianBlur(max(4, width // 160)))
+        floor_mask = floor_mask.filter(ImageFilter.GaussianBlur(max(5, width // 140)))
+        empty = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        overlay = Image.alpha_composite(overlay, Image.composite(wall_texture, empty, wall_mask))
+        overlay = Image.alpha_composite(overlay, Image.composite(floor_texture, empty, floor_mask))
 
         room = Image.alpha_composite(image.convert("RGBA"), overlay)
         draw = ImageDraw.Draw(room, "RGBA")
-        draw.rectangle((0, floor_y - max(3, height // 130), width, floor_y + max(4, height // 110)), fill=(36, 34, 30, 34))
+        trim_h = max(5, height // 65)
+        draw.rectangle((0, floor_y - trim_h, width, floor_y - max(1, trim_h // 2)), fill=(255, 255, 255, 62))
+        draw.rectangle((0, floor_y - max(1, trim_h // 2), width, floor_y + max(2, height // 180)), fill=(36, 34, 30, 28))
         _wood_planks(draw, width, height, floor_y, floor, theme)
         _wall_light_falloff(draw, width, floor_y)
         return room.convert("RGB")
@@ -159,38 +162,40 @@ class RedesignGenerator:
         draw = ImageDraw.Draw(layer, "RGBA")
         if theme == "industrial":
             for left in (int(width * 0.08), int(width * 0.72)):
-                frame = (left, int(floor_y * 0.18), left + int(width * 0.18), int(floor_y * 0.78))
-                draw.rectangle(frame, outline=(40, 42, 40, 140), width=max(2, width // 240))
-                draw.rectangle(_inset(frame, max(4, width // 120)), fill=(220, 225, 216, 36))
-            draw.rectangle((int(width * 0.05), int(floor_y * 0.12), int(width * 0.95), int(floor_y * 0.17)), fill=(44, 45, 41, 74))
+                frame = (left, int(floor_y * 0.2), left + int(width * 0.18), int(floor_y * 0.76))
+                _photo_round(draw, _offset(frame, max(3, width // 260), max(5, height // 220)), (0, 0, 0, 28), max(8, width // 120), "metal")
+                _photo_round(draw, frame, (44, 46, 42, 126), max(8, width // 120), "metal")
+                draw.rectangle(_inset(frame, max(7, width // 90)), fill=(220, 225, 216, 26))
+            draw.rectangle((int(width * 0.05), int(floor_y * 0.12), int(width * 0.95), int(floor_y * 0.16)), fill=(44, 45, 41, 44))
             return Image.alpha_composite(image.convert("RGBA"), layer).convert("RGB")
 
-        left_panel = (int(width * 0.1), int(floor_y * 0.18), int(width * 0.32), int(floor_y * 0.74))
-        right_panel = (int(width * 0.66), int(floor_y * 0.18), int(width * 0.9), int(floor_y * 0.74))
+        left_panel = (int(width * 0.11), int(floor_y * 0.22), int(width * 0.29), int(floor_y * 0.66))
+        right_panel = (int(width * 0.7), int(floor_y * 0.21), int(width * 0.88), int(floor_y * 0.65))
         for panel in (left_panel, right_panel):
             draw.rounded_rectangle(
-                _offset(panel, max(3, width // 220), max(4, height // 210)),
+                _offset(panel, max(3, width // 260), max(5, height // 230)),
                 radius=max(8, width // 100),
-                fill=(0, 0, 0, 34),
+                fill=(0, 0, 0, 24),
             )
             draw.rounded_rectangle(
                 panel,
                 radius=max(8, width // 100),
-                fill=(255, 255, 255, 44),
-                outline=(38, 36, 31, 80),
+                fill=(255, 255, 255, 24),
+                outline=(38, 36, 31, 52),
                 width=max(2, width // 340),
             )
             draw.rectangle(
                 (panel[0] + max(5, width // 130), panel[1] + max(5, width // 130), panel[2] - max(5, width // 130), panel[3] - max(5, width // 130)),
-                fill=(secondary[0], secondary[1], secondary[2], 26),
+                fill=(secondary[0], secondary[1], secondary[2], 18),
             )
 
         draw.rounded_rectangle(
-            (int(width * 0.42), int(floor_y * 0.18), int(width * 0.59), int(floor_y * 0.37)),
+            (int(width * 0.42), int(floor_y * 0.2), int(width * 0.59), int(floor_y * 0.38)),
             radius=max(8, width // 100),
-            fill=(accent[0], accent[1], accent[2], 126),
+            fill=(accent[0], accent[1], accent[2], 92),
         )
-        draw.line((int(width * 0.505), int(floor_y * 0.37), int(width * 0.505), floor_y), fill=(20, 20, 18, 24), width=max(1, width // 900))
+        draw.ellipse((int(width * 0.48), int(floor_y * 0.06), int(width * 0.53), int(floor_y * 0.15)), fill=(255, 244, 210, 78))
+        draw.line((int(width * 0.505), int(floor_y * 0.15), int(width * 0.505), int(floor_y * 0.2)), fill=(20, 20, 18, 32), width=max(1, width // 700))
         return Image.alpha_composite(image.convert("RGBA"), layer).convert("RGB")
 
     @staticmethod
@@ -236,19 +241,41 @@ class RedesignGenerator:
             _photo_round(draw, (int(width * 0.08), int(height * 0.34), int(width * 0.18), int(height * 0.8)), wood, max(8, width // 100), "wood")
             return _merge_photo_layer(image, layer)
 
-        sofa_fill = (accent[0], accent[1], accent[2], 226) if theme in {"contemporary", "industrial"} else (230, 226, 216, 238)
-        _soft_shadow(draw, (int(width * 0.15), int(height * 0.73), int(width * 0.76), int(height * 0.91)))
-        _soft_shadow(draw, (int(width * 0.22), int(height * 0.81), int(width * 0.74), int(height * 0.97)), (accent[0], accent[1], accent[2], 52))
-        _photo_round(draw, (int(width * 0.18), int(height * 0.58), int(width * 0.72), int(height * 0.78)), sofa_fill, max(18, width // 46), "fabric")
-        _photo_round(draw, (int(width * 0.22), int(height * 0.5), int(width * 0.68), int(height * 0.62)), (sofa_fill[0], sofa_fill[1], sofa_fill[2], 220), max(14, width // 60), "fabric")
+        sofa_fill = (
+            (accent[0], accent[1], accent[2], 238)
+            if theme in {"contemporary", "industrial"}
+            else (210, 204, 192, 246)
+        )
+        sofa_top = max(floor_y + int((height - floor_y) * 0.12), int(height * 0.54))
+        sofa_seat = max(floor_y + int((height - floor_y) * 0.24), int(height * 0.63))
+        sofa_bottom = min(height - int(height * 0.12), floor_y + int((height - floor_y) * 0.68))
+        rug = (int(width * 0.14), sofa_bottom - int(height * 0.04), int(width * 0.78), min(height - int(height * 0.04), sofa_bottom + int(height * 0.17)))
+        draw.rounded_rectangle(
+            rug,
+            radius=max(18, width // 34),
+            fill=(secondary[0], secondary[1], secondary[2], 148),
+        )
+        draw.rounded_rectangle(
+            _inset(rug, max(6, width // 90)),
+            radius=max(14, width // 44),
+            outline=(255, 255, 255, 34),
+            width=max(1, width // 520),
+        )
+        _soft_shadow(draw, (int(width * 0.12), sofa_bottom - int(height * 0.04), int(width * 0.78), sofa_bottom + int(height * 0.09)), (0, 0, 0, 46))
+        _soft_shadow(draw, (int(width * 0.22), sofa_bottom + int(height * 0.01), int(width * 0.74), sofa_bottom + int(height * 0.13)), (accent[0], accent[1], accent[2], 34))
+        _photo_round(draw, (int(width * 0.17), sofa_seat, int(width * 0.73), sofa_bottom), sofa_fill, max(18, width // 44), "fabric")
+        _photo_round(draw, (int(width * 0.21), sofa_top, int(width * 0.69), sofa_seat + int(height * 0.035)), (sofa_fill[0], sofa_fill[1], sofa_fill[2], 232), max(14, width // 58), "fabric")
         for index in range(1, 3):
             x = int(width * (0.18 + index * 0.18))
-            draw.line((x, int(height * 0.59), x, int(height * 0.77)), fill=(255, 255, 255, 52), width=max(1, width // 520))
-        _photo_round(draw, (int(width * 0.24), int(height * 0.56), int(width * 0.34), int(height * 0.65)), (255, 250, 238, 194), max(8, width // 100), "linen")
-        _photo_round(draw, (int(width * 0.56), int(height * 0.56), int(width * 0.66), int(height * 0.65)), (secondary[0], secondary[1], secondary[2], 188), max(8, width // 100), "fabric")
-        _photo_round(draw, (int(width * 0.34), int(height * 0.8), int(width * 0.64), int(height * 0.89)), secondary, max(10, width // 80), "wood")
-        _photo_round(draw, (int(width * 0.35), int(height * 0.795), int(width * 0.65), int(height * 0.815)), (255, 255, 255, 92), max(6, width // 120), "stone")
-        _photo_round(draw, (int(width * 0.74), int(height * 0.5), int(width * 0.79), int(height * 0.78)), dark, max(6, width // 100), "metal")
+            draw.line((x, sofa_seat, x, sofa_bottom - int(height * 0.02)), fill=(255, 255, 255, 38), width=max(1, width // 620))
+        _photo_round(draw, (int(width * 0.24), sofa_top + int(height * 0.04), int(width * 0.34), sofa_seat + int(height * 0.05)), (255, 250, 238, 184), max(8, width // 100), "linen")
+        _photo_round(draw, (int(width * 0.56), sofa_top + int(height * 0.04), int(width * 0.66), sofa_seat + int(height * 0.05)), (secondary[0], secondary[1], secondary[2], 172), max(8, width // 100), "fabric")
+        table_top = floor_y + int((height - floor_y) * 0.6)
+        table_bottom = floor_y + int((height - floor_y) * 0.79)
+        _soft_shadow(draw, (int(width * 0.3), table_bottom - int(height * 0.02), int(width * 0.68), table_bottom + int(height * 0.05)), (0, 0, 0, 32))
+        _photo_round(draw, (int(width * 0.34), table_top, int(width * 0.64), table_bottom), secondary, max(10, width // 80), "wood")
+        _photo_round(draw, (int(width * 0.35), table_top - int(height * 0.01), int(width * 0.65), table_top + int(height * 0.035)), (255, 255, 255, 110), max(6, width // 120), "stone")
+        _photo_round(draw, (int(width * 0.75), sofa_top, int(width * 0.8), sofa_bottom), dark, max(6, width // 100), "metal")
         return _merge_photo_layer(image, layer)
 
     @staticmethod
@@ -263,46 +290,47 @@ class RedesignGenerator:
     ) -> Image.Image:
         layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(layer, "RGBA")
-        planter = (int(width * 0.82), int(height * 0.73), int(width * 0.89), int(height * 0.9))
-        _soft_shadow(draw, (planter[0] - int(width * 0.012), planter[1] + int(height * 0.08), planter[2] + int(width * 0.02), planter[3] + int(height * 0.04)), (0, 0, 0, 36))
+        planter_bottom = floor_y + int((height - floor_y) * 0.75)
+        planter = (int(width * 0.82), planter_bottom - int(height * 0.17), int(width * 0.89), planter_bottom)
+        _soft_shadow(draw, (planter[0] - int(width * 0.012), planter_bottom - int(height * 0.02), planter[2] + int(width * 0.02), planter_bottom + int(height * 0.05)), (0, 0, 0, 36))
         _photo_round(draw, planter, (secondary[0], secondary[1], secondary[2], 220), max(6, width // 150), "ceramic")
         stem_x = int(width * 0.855)
-        stem_y = int(height * 0.72)
+        stem_y = planter[1]
         for offset in (-32, -18, 0, 18, 32):
-            draw.line((stem_x, stem_y + int(height * 0.12), stem_x + int(width * offset / 900), stem_y), fill=(67, 91, 67, 190), width=max(2, width // 420))
-            leaf = (stem_x + int(width * offset / 900) - 10, stem_y - 14, stem_x + int(width * offset / 900) + 18, stem_y + 12)
+            draw.line((stem_x, stem_y + int(height * 0.13), stem_x + int(width * offset / 900), stem_y - int(height * 0.08)), fill=(67, 91, 67, 174), width=max(2, width // 420))
+            leaf = (stem_x + int(width * offset / 900) - int(width * 0.014), stem_y - int(height * 0.11), stem_x + int(width * offset / 900) + int(width * 0.03), stem_y + int(height * 0.02))
             draw.ellipse(leaf, fill=(81, 111, 78, 166), outline=(44, 72, 48, 80))
         if theme == "luxury":
-            _photo_round(draw, (int(width * 0.12), int(height * 0.2), int(width * 0.2), int(height * 0.44)), (196, 163, 90, 130), max(7, width // 120), "metal")
+            _photo_round(draw, (int(width * 0.12), int(floor_y * 0.23), int(width * 0.2), int(floor_y * 0.47)), (196, 163, 90, 112), max(7, width // 120), "metal")
         else:
-            _photo_round(draw, (int(width * 0.12), int(height * 0.2), int(width * 0.24), int(height * 0.42)), (255, 255, 255, 92), max(7, width // 120), "canvas")
-        _photo_round(draw, (int(width * 0.735), int(height * 0.39), int(width * 0.825), int(height * 0.43)), (accent[0], accent[1], accent[2], 160), max(5, width // 180), "fabric")
+            _photo_round(draw, (int(width * 0.12), int(floor_y * 0.24), int(width * 0.24), int(floor_y * 0.46)), (255, 255, 255, 76), max(7, width // 120), "canvas")
+        _photo_round(draw, (int(width * 0.735), int(floor_y * 0.7), int(width * 0.825), int(floor_y * 0.78)), (accent[0], accent[1], accent[2], 136), max(5, width // 180), "fabric")
         return _merge_photo_layer(image, layer)
 
     @staticmethod
     def _lighting(image: Image.Image, width: int, height: int, floor_y: int, theme: str) -> Image.Image:
         layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(layer, "RGBA")
-        glow = (255, 242, 205, 132) if theme != "industrial" else (245, 215, 170, 112)
-        draw.ellipse((int(width * 0.42), int(height * 0.04), int(width * 0.58), int(height * 0.22)), fill=glow)
-        draw.ellipse((int(width * 0.3), int(height * 0.14), int(width * 0.7), int(height * 0.68)), fill=(255, 245, 212, 24))
-        draw.polygon([(0, floor_y), (int(width * 0.5), floor_y), (int(width * 0.16), height), (0, height)], fill=(0, 0, 0, 22))
-        draw.polygon([(int(width * 0.5), floor_y), (width, floor_y), (width, height), (int(width * 0.84), height)], fill=(255, 255, 255, 14))
-        return Image.alpha_composite(image.convert("RGBA"), layer.filter(ImageFilter.GaussianBlur(max(1, width // 650)))).convert("RGB")
+        glow = (255, 242, 205, 84) if theme != "industrial" else (245, 215, 170, 78)
+        draw.ellipse((int(width * 0.42), int(height * 0.035), int(width * 0.58), int(height * 0.22)), fill=glow)
+        draw.ellipse((int(width * 0.25), int(height * 0.09), int(width * 0.75), int(height * 0.7)), fill=(255, 245, 212, 20))
+        draw.polygon([(0, floor_y), (int(width * 0.5), floor_y), (int(width * 0.18), height), (0, height)], fill=(0, 0, 0, 18))
+        draw.polygon([(int(width * 0.52), floor_y), (width, floor_y), (width, height), (int(width * 0.82), height)], fill=(255, 255, 255, 12))
+        return Image.alpha_composite(image.convert("RGBA"), layer.filter(ImageFilter.GaussianBlur(max(1, width // 520)))).convert("RGB")
 
     @staticmethod
     def _finish_like_photo(image: Image.Image, width: int, height: int) -> Image.Image:
         vignette = Image.new("L", image.size, 0)
         vdraw = ImageDraw.Draw(vignette)
-        vdraw.ellipse((-width * 0.08, -height * 0.16, width * 1.08, height * 1.18), fill=160)
-        vignette = vignette.filter(ImageFilter.GaussianBlur(max(width, height) // 16))
-        image = Image.composite(image, Image.new("RGB", image.size, "#141611"), Image.eval(vignette, lambda p: 255 - p))
-        grain = Image.effect_noise(image.size, 6).convert("L")
-        grain_rgba = Image.merge("RGBA", (grain, grain, grain, Image.new("L", image.size, 18)))
+        vdraw.ellipse((-width * 0.08, -height * 0.16, width * 1.08, height * 1.18), fill=182)
+        vignette = vignette.filter(ImageFilter.GaussianBlur(max(width, height) // 14))
+        image = Image.composite(image, Image.new("RGB", image.size, "#141611"), vignette)
+        grain = Image.effect_noise(image.size, 4).convert("L")
+        grain_rgba = Image.merge("RGBA", (grain, grain, grain, Image.new("L", image.size, 10)))
         image = Image.alpha_composite(image.convert("RGBA"), grain_rgba).convert("RGB")
-        image = ImageEnhance.Color(image).enhance(0.96)
-        image = ImageEnhance.Contrast(image).enhance(1.06)
-        image = ImageEnhance.Sharpness(image).enhance(1.12)
+        image = ImageEnhance.Color(image).enhance(1.02)
+        image = ImageEnhance.Contrast(image).enhance(1.03)
+        image = ImageEnhance.Sharpness(image).enhance(1.08)
         return image
 
 
@@ -313,6 +341,40 @@ def _rgba(value: str, alpha: int) -> tuple[int, int, int, int]:
     if len(color) != 6:
         color = "d8d1c2"
     return (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16), alpha)
+
+
+def _prepare_render_canvas(image: Image.Image) -> Image.Image:
+    width, height = image.size
+    target_width = max(width, 960)
+    if width >= target_width:
+        return image
+
+    target_height = max(1, int(height * target_width / width))
+    return image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+
+def _estimate_floor_line(image: Image.Image) -> int:
+    width, height = image.size
+    grayscale = ImageOps.grayscale(image).filter(ImageFilter.GaussianBlur(max(1, width // 420)))
+    sample_width = min(width, 180)
+    sample_height = min(height, 140)
+    sample = grayscale.resize((sample_width, sample_height), Image.Resampling.BILINEAR)
+    pixels = sample.load()
+
+    best_y = int(sample_height * 0.62)
+    best_score = -1
+    start = int(sample_height * 0.42)
+    end = int(sample_height * 0.78)
+    for y in range(start, end):
+        row_score = 0
+        for x in range(2, sample_width - 2):
+            row_score += abs(int(pixels[x, y]) - int(pixels[x, y - 2]))
+        if row_score > best_score:
+            best_score = row_score
+            best_y = y
+
+    floor_y = int(best_y * height / sample_height)
+    return max(int(height * 0.48), min(int(height * 0.72), floor_y))
 
 
 def _texture_layer(
@@ -328,12 +390,16 @@ def _texture_layer(
     highlight = tuple(min(255, channel + 24) for channel in color)
     shadow = tuple(max(0, channel - 28) for channel in color)
 
-    for y in range(-height, height * 2, spacing):
-        draw.line((0, y, width, y + int(width * 0.18)), fill=(*highlight, max(4, alpha // 3)), width=1)
-    for x in range(0, width, spacing * 2):
-        draw.line((x, 0, x + int(width * 0.05), height), fill=(*shadow, max(3, alpha // 4)), width=1)
+    for y in range(-height, height * 2, spacing * 2):
+        draw.line((0, y, width, y + int(width * 0.08)), fill=(*highlight, max(3, alpha // 5)), width=1)
+    for x in range(0, width, spacing * 5):
+        draw.line((x, 0, x + int(width * 0.04), height), fill=(*shadow, max(2, alpha // 7)), width=1)
 
-    return layer.filter(ImageFilter.GaussianBlur(0.55))
+    grain = Image.effect_noise(size, 5).convert("L")
+    grain_alpha = Image.new("L", size, max(3, alpha // 8))
+    grain_layer = Image.merge("RGBA", (grain, grain, grain, grain_alpha))
+    layer = Image.alpha_composite(layer, grain_layer)
+    return layer.filter(ImageFilter.GaussianBlur(0.8))
 
 
 def _wood_planks(
@@ -344,19 +410,11 @@ def _wood_planks(
     floor: tuple[int, int, int, int],
     theme: str,
 ) -> None:
-    line_alpha = 34 if theme != "minimal" else 22
-    plank_count = 8
+    line_alpha = 8 if theme != "minimal" else 5
+    plank_count = 7
     for index in range(1, plank_count):
         y = floor_y + int((height - floor_y) * index / plank_count)
-        draw.line((0, y, width, y), fill=(255, 255, 255, line_alpha), width=max(1, width // 700))
-
-    for index in range(-6, 7):
-        x = int(width * (0.5 + index * 0.11))
-        draw.line((width // 2, floor_y, x, height), fill=(24, 23, 20, 24), width=max(1, width // 800))
-
-    tint = tuple(max(0, channel - 36) for channel in floor[:3])
-    for index in range(0, width, max(48, width // 9)):
-        draw.line((index, floor_y, index + int(width * 0.18), height), fill=(*tint, 16), width=max(1, width // 560))
+        draw.line((0, y, width, y + max(1, height // 140)), fill=(255, 255, 255, line_alpha), width=max(1, width // 1100))
 
 
 def _wall_light_falloff(draw: ImageDraw.ImageDraw, width: int, floor_y: int) -> None:
@@ -399,8 +457,8 @@ def _photo_round(
     left, top, right, bottom = rect
     width = max(1, right - left)
     height = max(1, bottom - top)
-    highlight_alpha = 58 if material in {"stone", "linen", "canvas"} else 36
-    shadow_alpha = 34 if material in {"wood", "metal"} else 22
+    highlight_alpha = 44 if material in {"stone", "linen", "canvas"} else 24
+    shadow_alpha = 24 if material in {"wood", "metal"} else 16
     draw.rounded_rectangle(
         (left + max(1, width // 24), top + max(1, height // 18), right - max(1, width // 24), top + max(2, height // 5)),
         radius=max(1, radius // 2),
@@ -411,18 +469,18 @@ def _photo_round(
     if material == "wood":
         for index in range(1, 4):
             y = top + int(height * index / 4)
-            draw.line((left + radius, y, right - radius, y + max(1, height // 28)), fill=(58, 42, 28, 30), width=max(1, width // 220))
+            draw.line((left + radius, y, right - radius, y + max(1, height // 34)), fill=(58, 42, 28, 18), width=max(1, width // 260))
     elif material == "fabric":
         for index in range(1, 4):
             x = left + int(width * index / 4)
-            draw.line((x, top + radius, x, bottom - radius), fill=(255, 255, 255, 24), width=1)
+            draw.line((x, top + radius, x, bottom - radius), fill=(255, 255, 255, 14), width=1)
     elif material == "metal":
         draw.rounded_rectangle(_inset(rect, max(2, min(width, height) // 8)), radius=max(1, radius // 2), outline=(255, 255, 255, 42), width=1)
 
 
 def _merge_photo_layer(image: Image.Image, layer: Image.Image) -> Image.Image:
-    softened = layer.filter(ImageFilter.GaussianBlur(0.25))
-    return Image.alpha_composite(image.convert("RGBA"), softened).convert("RGB")
+    shadowed = layer.filter(ImageFilter.GaussianBlur(0.12))
+    return Image.alpha_composite(image.convert("RGBA"), shadowed).convert("RGB")
 
 
 def _score_breakdown(brief: DesignBrief, theme: str, index: int) -> ScoreBreakdown:
