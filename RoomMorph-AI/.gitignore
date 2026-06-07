@@ -8,10 +8,12 @@ dist/
 build/
 __pycache__/
 *.py[cod]
+.codex-run/
 
 # Local configuration
 .env
 .env.*
+!.env.example
 
 # Local runtime output
 logs/

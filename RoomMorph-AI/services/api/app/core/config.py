@@ -18,6 +18,14 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     max_upload_mb: int = 12
+    image_generation_provider: str = Field(default="openai", alias="IMAGE_GENERATION_PROVIDER")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_image_model: str = Field(default="gpt-image-1", alias="OPENAI_IMAGE_MODEL")
+    openai_image_size: str = Field(default="auto", alias="OPENAI_IMAGE_SIZE")
+    openai_image_quality: str = Field(default="medium", alias="OPENAI_IMAGE_QUALITY")
+    openai_image_input_fidelity: str = Field(default="high", alias="OPENAI_IMAGE_INPUT_FIDELITY")
+    openai_image_output_format: str = Field(default="jpeg", alias="OPENAI_IMAGE_OUTPUT_FORMAT")
+    openai_image_timeout_seconds: int = Field(default=180, alias="OPENAI_IMAGE_TIMEOUT_SECONDS")
 
     @computed_field
     @property

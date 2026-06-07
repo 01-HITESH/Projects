@@ -1,8 +1,8 @@
 # RoomMorph AI
 
-AI-powered interior redesign studio prototype. Upload a 2D room photo, generate several design concepts, choose a theme, convert it into an interactive 3D room, then compare and customize the result.
+AI-powered interior redesign studio prototype. Upload a real room photo, generate several photoreal redesign concepts, choose a theme, convert it into an interactive 3D room, then compare and customize the result.
 
-The prototype runs fully locally. It uses deterministic local image and 3D fallbacks instead of external AI services, so no API keys are required.
+The redesign concept step uses OpenAI image editing by default. The 3D scene builder remains local and deterministic.
 
 ## Project Structure
 
@@ -18,6 +18,7 @@ Install these on the device before running the project:
 - Node.js 20 or newer
 - npm, included with Node.js
 - Python 3.11 or newer
+- OpenAI API key for real image generation
 
 ## Clone
 
@@ -38,7 +39,14 @@ Windows PowerShell:
 cd services\api
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --only-binary=:all: -r requirements.txt
+copy .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Edit `services/api/.env` and set:
+
+```text
+OPENAI_API_KEY=your_api_key_here
 ```
 
 macOS or Linux:
@@ -47,7 +55,14 @@ macOS or Linux:
 cd services/api
 python3 -m venv .venv
 ./.venv/bin/python -m pip install --only-binary=:all: -r requirements.txt
+cp .env.example .env
 ./.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Edit `services/api/.env` and set:
+
+```text
+OPENAI_API_KEY=your_api_key_here
 ```
 
 Backend URLs:
@@ -87,7 +102,11 @@ The default frontend expects the backend at `http://localhost:8000`. To use a di
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-The redesign flow now uses the deterministic local renderer only. It does not require image-generation API keys or manual after-photo uploads.
+The redesign flow calls the OpenAI Image API edit endpoint by default and stores generated concepts under `services/api/storage`. To test without API usage, set this in `services/api/.env`:
+
+```text
+IMAGE_GENERATION_PROVIDER=local
+```
 
 The backend stores generated uploads and project JSON under `services/api/storage`. This folder is local runtime data and is ignored by Git.
 

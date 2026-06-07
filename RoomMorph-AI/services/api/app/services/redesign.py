@@ -4,7 +4,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
+from app.core.config import settings
 from app.models.schemas import BudgetEstimate, DesignBrief, DesignConcept, MaterialPlanItem, ScoreBreakdown
+from app.services.image_generation import OpenAIImageEditProvider
 
 
 THEME_KITS: dict[str, dict[str, object]] = {
@@ -47,6 +49,9 @@ THEME_KITS: dict[str, dict[str, object]] = {
 
 
 class RedesignGenerator:
+    def __init__(self) -> None:
+        self.image_provider = OpenAIImageEditProvider()
+
     def generate(
         self,
         source_path: Path,
@@ -59,12 +64,13 @@ class RedesignGenerator:
         for index, theme in enumerate(themes[:5]):
             key = theme.lower().strip()
             kit = THEME_KITS.get(key, THEME_KITS["modern"])
-            filename = f"concept-{index + 1}-{key.replace(' ', '-')}.jpg"
+            filename = f"concept-{index + 1}-{key.replace(' ', '-')}.{_output_extension()}"
             palette = list(kit["palette"])
             if brief.palette:
                 palette = (brief.palette + palette)[:4]
             preview_url = f"__ASSET__/{filename}"
-            self._render_concept(source_path, output_dir / filename, brief.room_type, key, palette)
+            output_path = output_dir / filename
+            self._generate_concept_image(source_path, output_path, brief, key, palette, str(kit["title"]))
             concepts.append(
                 DesignConcept(
                     id=f"{project_id}-{index + 1}",
@@ -83,6 +89,25 @@ class RedesignGenerator:
                 )
             )
         return concepts
+
+    def _generate_concept_image(
+        self,
+        source_path: Path,
+        output_path: Path,
+        brief: DesignBrief,
+        theme: str,
+        palette: list[str],
+        title: str,
+    ) -> None:
+        provider = settings.image_generation_provider.lower().strip()
+        if provider == "local":
+            self._render_concept(source_path, output_path, brief.room_type, theme, palette)
+            return
+        if provider != "openai":
+            raise RuntimeError(f"Unsupported IMAGE_GENERATION_PROVIDER: {settings.image_generation_provider}")
+
+        prompt = _image_prompt(brief, theme, palette, title)
+        self.image_provider.generate_room_redesign(source_path, output_path, prompt)
 
     def _render_concept(
         self,
@@ -586,3 +611,39 @@ def _tradeoffs(brief: DesignBrief, kit: dict[str, object], theme: str) -> list[s
 
 def _clamp(value: float) -> float:
     return round(max(0.45, min(0.98, value)), 2)
+
+
+def _image_prompt(brief: DesignBrief, theme: str, palette: list[str], title: str) -> str:
+    palette_text = ", ".join(palette) if palette else "a coordinated interior palette"
+    locked = ", ".join(brief.locked_elements) if brief.locked_elements else "fixed architecture, windows, doors, ceiling lines, and camera perspective"
+    constraints = brief.constraints.strip() or "No special constraints."
+    lifestyle = brief.lifestyle.strip() or "Everyday use."
+    return (
+        "Create a photorealistic interior redesign from the provided real room photo. "
+        "Preserve the original room geometry, camera angle, perspective, window and door placement, "
+        "wall openings, ceiling height, and major built-in architecture. "
+        "Do not turn this into an illustration, render mockup, floor plan, collage, or 3D viewport. "
+        f"Room type: {brief.room_type}. "
+        f"Design direction: {title} / {theme}. "
+        f"Color palette: {palette_text}. "
+        f"Budget level: {brief.budget_range}. "
+        f"Lifestyle: {lifestyle}. "
+        f"Primary priority: {brief.priority}. "
+        f"User constraints: {constraints}. "
+        f"Elements to preserve: {locked}. "
+        "Update movable furniture, textiles, decor, lighting mood, wall color, floor finish, and styling "
+        "so the image looks like a real completed room photographed with natural light. "
+        "Keep scale believable, avoid warped furniture, avoid text or labels, avoid changing the room into a different space, "
+        "and do not add people."
+    )
+
+
+def _output_extension() -> str:
+    if settings.image_generation_provider.lower().strip() == "local":
+        return "jpg"
+    return {
+        "jpeg": "jpg",
+        "jpg": "jpg",
+        "png": "png",
+        "webp": "webp",
+    }.get(settings.openai_image_output_format.lower().strip(), "jpg")

@@ -4,7 +4,7 @@
 [Next.js Upload UI]
   -> [FastAPI API]
     -> image validation + local asset storage
-    -> deterministic redesign generator
+    -> OpenAI image edit provider for photoreal redesign concepts
     -> design variant gallery
     -> design intelligence report
     -> selected design scene builder
@@ -16,10 +16,14 @@
     -> before/after comparison
 ```
 
-The prototype uses a deterministic local renderer in place of external Stable Diffusion,
-ControlNet, segmentation, and 3D asset generation services. The API boundaries are
-designed so hosted model calls can replace these services later if that product decision
-is revisited.
+The redesign concept step now calls a hosted image-to-image provider by default. The
+current provider is OpenAI's Image API edit endpoint, which takes the uploaded room photo
+and a design prompt, then returns a photoreal concept image. A deterministic local renderer
+still exists behind `IMAGE_GENERATION_PROVIDER=local` for UI testing without API usage.
+
+The 3D scene builder remains a structured local scene generator. It creates editable
+web primitives from the selected concept's theme, palette, material plan, and budget
+metadata; it does not reconstruct production-grade geometry from the generated image.
 
 The current local intelligence layer ranks concepts with style, feasibility, budget,
 maintenance, and sustainability scores. It also generates an estimated INR budget,
