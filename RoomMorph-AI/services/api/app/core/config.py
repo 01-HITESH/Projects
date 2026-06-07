@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     max_upload_mb: int = 12
-    image_generation_provider: str = Field(default="openai", alias="IMAGE_GENERATION_PROVIDER")
+    image_generation_provider: str = Field(default="automatic1111", alias="IMAGE_GENERATION_PROVIDER")
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     openai_image_model: str = Field(default="gpt-image-1", alias="OPENAI_IMAGE_MODEL")
     openai_image_size: str = Field(default="auto", alias="OPENAI_IMAGE_SIZE")
@@ -26,6 +26,20 @@ class Settings(BaseSettings):
     openai_image_input_fidelity: str = Field(default="high", alias="OPENAI_IMAGE_INPUT_FIDELITY")
     openai_image_output_format: str = Field(default="jpeg", alias="OPENAI_IMAGE_OUTPUT_FORMAT")
     openai_image_timeout_seconds: int = Field(default=180, alias="OPENAI_IMAGE_TIMEOUT_SECONDS")
+    sd_webui_url: str = Field(default="http://127.0.0.1:7860", alias="SD_WEBUI_URL")
+    sd_webui_steps: int = Field(default=30, alias="SD_WEBUI_STEPS")
+    sd_webui_cfg_scale: float = Field(default=7.0, alias="SD_WEBUI_CFG_SCALE")
+    sd_webui_denoising_strength: float = Field(default=0.62, alias="SD_WEBUI_DENOISING_STRENGTH")
+    sd_webui_sampler_name: str = Field(default="DPM++ 2M Karras", alias="SD_WEBUI_SAMPLER_NAME")
+    sd_webui_max_size: int = Field(default=1024, alias="SD_WEBUI_MAX_SIZE")
+    sd_webui_negative_prompt: str = Field(
+        default=(
+            "cartoon, illustration, CGI, 3d render, dollhouse, floor plan, warped room, "
+            "distorted perspective, deformed furniture, duplicate furniture, text, watermark, logo, people"
+        ),
+        alias="SD_WEBUI_NEGATIVE_PROMPT",
+    )
+    sd_webui_timeout_seconds: int = Field(default=240, alias="SD_WEBUI_TIMEOUT_SECONDS")
 
     @computed_field
     @property

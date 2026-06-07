@@ -5,9 +5,65 @@ import json
 import mimetypes
 import urllib.error
 import urllib.request
+from io import BytesIO
 from pathlib import Path
 
+from PIL import Image, ImageOps
+
 from app.core.config import settings
+
+
+class Automatic1111ImageProvider:
+    def generate_room_redesign(
+        self,
+        source_path: Path,
+        output_path: Path,
+        prompt: str,
+    ) -> None:
+        image, width, height = _load_image_for_sd(source_path)
+        payload = {
+            "init_images": [_image_to_base64(image)],
+            "prompt": prompt,
+            "negative_prompt": settings.sd_webui_negative_prompt,
+            "steps": settings.sd_webui_steps,
+            "cfg_scale": settings.sd_webui_cfg_scale,
+            "denoising_strength": settings.sd_webui_denoising_strength,
+            "sampler_name": settings.sd_webui_sampler_name,
+            "width": width,
+            "height": height,
+            "batch_size": 1,
+            "n_iter": 1,
+            "restore_faces": False,
+            "send_images": True,
+            "save_images": False,
+        }
+        endpoint = f"{settings.sd_webui_url.rstrip('/')}/sdapi/v1/img2img"
+        request = urllib.request.Request(
+            endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=settings.sd_webui_timeout_seconds) as response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"AUTOMATIC1111 image generation failed: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                "AUTOMATIC1111 is not reachable. Start Stable Diffusion WebUI with --api "
+                f"and confirm {settings.sd_webui_url} is available. Error: {exc.reason}"
+            ) from exc
+
+        images = response_payload.get("images")
+        if not isinstance(images, list) or not images:
+            raise RuntimeError("AUTOMATIC1111 returned no generated images.")
+        image_data = images[0]
+        if not isinstance(image_data, str) or not image_data:
+            raise RuntimeError("AUTOMATIC1111 returned an invalid image payload.")
+        output_path.write_bytes(_decode_base64_image(image_data))
 
 
 class OpenAIImageEditProvider:
@@ -22,7 +78,8 @@ class OpenAIImageEditProvider:
         if not settings.openai_api_key.strip():
             raise RuntimeError(
                 "OPENAI_API_KEY is required for real image generation. "
-                "Set IMAGE_GENERATION_PROVIDER=local to use the development fallback."
+                "Set IMAGE_GENERATION_PROVIDER=automatic1111 to use local Stable Diffusion, "
+                "or IMAGE_GENERATION_PROVIDER=local to use the development fallback."
             )
 
         fields = {
@@ -60,7 +117,7 @@ class OpenAIImageEditProvider:
             raise RuntimeError(f"OpenAI image generation could not connect: {exc.reason}") from exc
 
         b64_image = _extract_b64_image(payload)
-        output_path.write_bytes(base64.b64decode(b64_image))
+        output_path.write_bytes(_decode_base64_image(b64_image))
 
 
 def _extract_b64_image(payload: dict[str, object]) -> str:
@@ -74,6 +131,34 @@ def _extract_b64_image(payload: dict[str, object]) -> str:
     if not isinstance(image, str) or not image:
         raise RuntimeError("OpenAI image generation did not return base64 image data.")
     return image
+
+
+def _load_image_for_sd(source_path: Path) -> tuple[Image.Image, int, int]:
+    image = ImageOps.exif_transpose(Image.open(source_path)).convert("RGB")
+    max_size = max(512, settings.sd_webui_max_size)
+    image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+    width = _multiple_of_64(image.width)
+    height = _multiple_of_64(image.height)
+    if image.size != (width, height):
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+    return image, width, height
+
+
+def _image_to_base64(image: Image.Image) -> str:
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def _decode_base64_image(value: str) -> bytes:
+    if "," in value and value.lower().startswith("data:"):
+        value = value.split(",", 1)[1]
+    return base64.b64decode(value)
+
+
+def _multiple_of_64(value: int) -> int:
+    rounded = round(value / 64) * 64
+    return max(512, int(rounded))
 
 
 def _multipart_body(

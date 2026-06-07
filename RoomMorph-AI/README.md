@@ -2,7 +2,7 @@
 
 AI-powered interior redesign studio prototype. Upload a real room photo, generate several photoreal redesign concepts, choose a theme, convert it into an interactive 3D room, then compare and customize the result.
 
-The redesign concept step uses OpenAI image editing by default. The 3D scene builder remains local and deterministic.
+The redesign concept step uses local Stable Diffusion through AUTOMATIC1111 by default. OpenAI image editing is available as an optional paid provider. The 3D scene builder remains local and deterministic.
 
 ## Project Structure
 
@@ -18,7 +18,7 @@ Install these on the device before running the project:
 - Node.js 20 or newer
 - npm, included with Node.js
 - Python 3.11 or newer
-- OpenAI API key for real image generation
+- AUTOMATIC1111 Stable Diffusion WebUI for free local image generation, or an OpenAI API key for the optional hosted provider
 
 ## Clone
 
@@ -43,10 +43,17 @@ copy .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Edit `services/api/.env` and set:
+For free local generation, start AUTOMATIC1111 Stable Diffusion WebUI with API mode enabled:
 
 ```text
-OPENAI_API_KEY=your_api_key_here
+webui-user.bat --api
+```
+
+Then keep this in `services/api/.env`:
+
+```text
+IMAGE_GENERATION_PROVIDER=automatic1111
+SD_WEBUI_URL=http://127.0.0.1:7860
 ```
 
 macOS or Linux:
@@ -59,10 +66,17 @@ cp .env.example .env
 ./.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Edit `services/api/.env` and set:
+For free local generation, start AUTOMATIC1111 Stable Diffusion WebUI with API mode enabled:
 
 ```text
-OPENAI_API_KEY=your_api_key_here
+./webui.sh --api
+```
+
+Then keep this in `services/api/.env`:
+
+```text
+IMAGE_GENERATION_PROVIDER=automatic1111
+SD_WEBUI_URL=http://127.0.0.1:7860
 ```
 
 Backend URLs:
@@ -102,7 +116,17 @@ The default frontend expects the backend at `http://localhost:8000`. To use a di
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-The redesign flow calls the OpenAI Image API edit endpoint by default and stores generated concepts under `services/api/storage`. To test without API usage, set this in `services/api/.env`:
+The redesign flow calls AUTOMATIC1111's local Stable Diffusion `img2img` API by default and stores generated concepts under `services/api/storage`.
+
+To use OpenAI instead, set this in `services/api/.env`:
+
+```text
+IMAGE_GENERATION_PROVIDER=openai
+OPENAI_API_KEY=your_api_key_here
+OPENAI_IMAGE_MODEL=gpt-image-1
+```
+
+To test without AI generation, set this in `services/api/.env`:
 
 ```text
 IMAGE_GENERATION_PROVIDER=local

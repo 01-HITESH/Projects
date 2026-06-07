@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from app.core.config import settings
 from app.models.schemas import BudgetEstimate, DesignBrief, DesignConcept, MaterialPlanItem, ScoreBreakdown
-from app.services.image_generation import OpenAIImageEditProvider
+from app.services.image_generation import Automatic1111ImageProvider, OpenAIImageEditProvider
 
 
 THEME_KITS: dict[str, dict[str, object]] = {
@@ -50,7 +50,8 @@ THEME_KITS: dict[str, dict[str, object]] = {
 
 class RedesignGenerator:
     def __init__(self) -> None:
-        self.image_provider = OpenAIImageEditProvider()
+        self.openai_provider = OpenAIImageEditProvider()
+        self.sd_provider = Automatic1111ImageProvider()
 
     def generate(
         self,
@@ -103,11 +104,15 @@ class RedesignGenerator:
         if provider == "local":
             self._render_concept(source_path, output_path, brief.room_type, theme, palette)
             return
-        if provider != "openai":
-            raise RuntimeError(f"Unsupported IMAGE_GENERATION_PROVIDER: {settings.image_generation_provider}")
 
         prompt = _image_prompt(brief, theme, palette, title)
-        self.image_provider.generate_room_redesign(source_path, output_path, prompt)
+        if provider == "openai":
+            self.openai_provider.generate_room_redesign(source_path, output_path, prompt)
+            return
+        if provider == "automatic1111":
+            self.sd_provider.generate_room_redesign(source_path, output_path, prompt)
+            return
+        raise RuntimeError(f"Unsupported IMAGE_GENERATION_PROVIDER: {settings.image_generation_provider}")
 
     def _render_concept(
         self,
@@ -639,8 +644,11 @@ def _image_prompt(brief: DesignBrief, theme: str, palette: list[str], title: str
 
 
 def _output_extension() -> str:
-    if settings.image_generation_provider.lower().strip() == "local":
+    provider = settings.image_generation_provider.lower().strip()
+    if provider == "local":
         return "jpg"
+    if provider == "automatic1111":
+        return "png"
     return {
         "jpeg": "jpg",
         "jpg": "jpg",

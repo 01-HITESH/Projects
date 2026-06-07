@@ -4,7 +4,7 @@
 [Next.js Upload UI]
   -> [FastAPI API]
     -> image validation + local asset storage
-    -> OpenAI image edit provider for photoreal redesign concepts
+    -> local AUTOMATIC1111 img2img or optional OpenAI image edit provider
     -> design variant gallery
     -> design intelligence report
     -> selected design scene builder
@@ -16,10 +16,12 @@
     -> before/after comparison
 ```
 
-The redesign concept step now calls a hosted image-to-image provider by default. The
-current provider is OpenAI's Image API edit endpoint, which takes the uploaded room photo
-and a design prompt, then returns a photoreal concept image. A deterministic local renderer
-still exists behind `IMAGE_GENERATION_PROVIDER=local` for UI testing without API usage.
+The redesign concept step now calls a real image-to-image provider by default. The
+default provider is AUTOMATIC1111 Stable Diffusion WebUI running locally with `--api`;
+it takes the uploaded room photo and a design prompt, then returns a photoreal concept
+image through its `img2img` endpoint. OpenAI's Image API edit endpoint remains available
+as `IMAGE_GENERATION_PROVIDER=openai`. A deterministic local renderer still exists behind
+`IMAGE_GENERATION_PROVIDER=local` for UI testing without AI usage.
 
 The 3D scene builder remains a structured local scene generator. It creates editable
 web primitives from the selected concept's theme, palette, material plan, and budget
