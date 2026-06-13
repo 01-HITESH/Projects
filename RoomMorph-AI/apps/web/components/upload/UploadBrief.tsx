@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Check, Image, Loader2, WandSparkles, X } from "lucide-react";
+import { Check, Image, Loader2, PlugZap, WandSparkles, X } from "lucide-react";
 
-import type { RedesignPayload } from "@/types/project";
+import { getGenerationStatus } from "@/lib/api";
+import type { GenerationStatus, RedesignPayload } from "@/types/project";
 
 type UploadBriefProps = {
   loading: boolean;
@@ -35,6 +36,8 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
   const [lifestyle, setLifestyle] = useState(lifestyleOptions[0]);
   const [priority, setPriority] = useState("balanced");
   const [constraints, setConstraints] = useState("Keep the room practical, brighter, and easier to maintain.");
+  const [generationStatus, setGenerationStatus] = useState<GenerationStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
     if (!file) {
@@ -45,6 +48,37 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadGenerationStatus() {
+      setStatusLoading(true);
+      try {
+        const status = await getGenerationStatus();
+        if (active) {
+          setGenerationStatus(status);
+        }
+      } catch (statusError) {
+        if (active) {
+          setGenerationStatus({
+            provider: "unknown",
+            ready: false,
+            message: statusError instanceof Error ? statusError.message : "Image generator status is unavailable.",
+          });
+        }
+      } finally {
+        if (active) {
+          setStatusLoading(false);
+        }
+      }
+    }
+
+    void loadGenerationStatus();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,8 +107,13 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
   return (
     <form className="panel flex h-full flex-col gap-5 rounded-lg p-4" onSubmit={submit}>
       <div>
-        <p className="text-sm font-medium text-steel">Step 1</p>
-        <h2 className="mt-1 text-xl font-semibold text-ink">Upload room photo</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-steel">Step 1</p>
+            <h2 className="mt-1 text-xl font-semibold text-ink">Upload room photo</h2>
+          </div>
+          <GeneratorBadge loading={statusLoading} status={generationStatus} />
+        </div>
         <p className="mt-2 text-sm leading-5 text-ink/58">Generate local concept directions from a 2D room image and a practical design brief.</p>
       </div>
 
@@ -213,5 +252,31 @@ export function UploadBrief({ loading, error, userId, onSubmit }: UploadBriefPro
         Generate concepts
       </button>
     </form>
+  );
+}
+
+function GeneratorBadge({
+  loading,
+  status,
+}: {
+  loading: boolean;
+  status: GenerationStatus | null;
+}) {
+  const provider = status?.provider === "automatic1111" ? "A1111" : status?.provider ?? "Generator";
+  const ready = Boolean(status?.ready);
+
+  return (
+    <div
+      className={[
+        "inline-flex max-w-[11rem] items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium",
+        ready ? "border-sage/30 bg-sage/10 text-ink" : "border-clay/30 bg-clay/10 text-ink",
+      ].join(" ")}
+      title={status?.message ?? "Checking image generator status."}
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
+      <span className="truncate">
+        {loading ? "Checking" : `${provider}: ${ready ? "ready" : "offline"}`}
+      </span>
+    </div>
   );
 }

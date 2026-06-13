@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     sd_webui_denoising_strength: float = Field(default=0.62, alias="SD_WEBUI_DENOISING_STRENGTH")
     sd_webui_sampler_name: str = Field(default="DPM++ 2M Karras", alias="SD_WEBUI_SAMPLER_NAME")
     sd_webui_max_size: int = Field(default=1024, alias="SD_WEBUI_MAX_SIZE")
+    sd_webui_status_timeout_seconds: int = Field(default=5, alias="SD_WEBUI_STATUS_TIMEOUT_SECONDS")
     sd_webui_negative_prompt: str = Field(
         default=(
             "cartoon, illustration, CGI, 3d render, dollhouse, floor plan, warped room, "

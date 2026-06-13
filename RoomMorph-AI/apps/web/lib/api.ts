@@ -1,4 +1,11 @@
-import type { Project, RedesignPayload, RedesignResponse, SceneDocument, User } from "@/types/project";
+import type {
+  GenerationStatus,
+  Project,
+  RedesignPayload,
+  RedesignResponse,
+  SceneDocument,
+  User,
+} from "@/types/project";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -45,6 +52,11 @@ export async function createRedesigns(payload: RedesignPayload): Promise<Redesig
   formData.append("priority", payload.priority);
   const response = await fetch(`${API_BASE_URL}/api/redesigns`, { method: "POST", body: formData });
   return parseResponse<RedesignResponse>(response);
+}
+
+export async function getGenerationStatus(): Promise<GenerationStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/generation/status`, { cache: "no-store" });
+  return parseResponse<GenerationStatus>(response);
 }
 
 export async function selectConcept(projectId: string, conceptId: string): Promise<Project> {

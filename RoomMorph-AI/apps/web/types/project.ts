@@ -43,6 +43,14 @@ export type MaterialPlanItem = {
   care: string;
 };
 
+export type GenerationStatus = {
+  provider: string;
+  ready: boolean;
+  message: string;
+  endpoint?: string | null;
+  model?: string | null;
+};
+
 export type DesignConcept = {
   id: string;
   projectId: string;

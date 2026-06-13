@@ -61,6 +61,14 @@ class MaterialPlanItem(BaseModel):
     care: str
 
 
+class GenerationStatus(BaseModel):
+    provider: str
+    ready: bool
+    message: str
+    endpoint: str | None = None
+    model: str | None = None
+
+
 class DesignConcept(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 

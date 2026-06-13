@@ -5,10 +5,12 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.core.config import settings
 from app.models.schemas import (
     Asset,
     ComparisonResponse,
     DesignBrief,
+    GenerationStatus,
     LoginRequest,
     LoginResponse,
     Project,
@@ -26,6 +28,33 @@ router = APIRouter(tags=["projects"])
 redesign_generator = RedesignGenerator()
 scene_builder = SceneBuilder()
 user_store = UserStore()
+
+
+@router.get("/generation/status", response_model=GenerationStatus)
+def get_generation_status() -> GenerationStatus:
+    provider = settings.image_generation_provider.lower().strip()
+    if provider == "automatic1111":
+        return GenerationStatus(**redesign_generator.sd_provider.status())
+    if provider == "openai":
+        ready = bool(settings.openai_api_key.strip())
+        return GenerationStatus(
+            provider="openai",
+            ready=ready,
+            message="OpenAI image generation is configured." if ready else "OPENAI_API_KEY is not configured.",
+            endpoint="https://api.openai.com/v1/images/edits",
+            model=settings.openai_image_model,
+        )
+    if provider == "local":
+        return GenerationStatus(
+            provider="local",
+            ready=True,
+            message="Using deterministic local development renderer.",
+        )
+    return GenerationStatus(
+        provider=settings.image_generation_provider,
+        ready=False,
+        message=f"Unsupported IMAGE_GENERATION_PROVIDER: {settings.image_generation_provider}",
+    )
 
 
 @router.post("/auth/login", response_model=LoginResponse)

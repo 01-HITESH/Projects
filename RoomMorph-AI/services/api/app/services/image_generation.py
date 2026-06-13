@@ -14,6 +14,29 @@ from app.core.config import settings
 
 
 class Automatic1111ImageProvider:
+    def status(self) -> dict[str, str | bool | None]:
+        endpoint = settings.sd_webui_url.rstrip("/")
+        try:
+            options = _get_json(f"{endpoint}/sdapi/v1/options", settings.sd_webui_status_timeout_seconds)
+        except RuntimeError as exc:
+            return {
+                "provider": "automatic1111",
+                "ready": False,
+                "message": str(exc),
+                "endpoint": endpoint,
+                "model": None,
+            }
+
+        model = options.get("sd_model_checkpoint")
+        model_name = model if isinstance(model, str) and model else None
+        return {
+            "provider": "automatic1111",
+            "ready": True,
+            "message": "AUTOMATIC1111 API is reachable.",
+            "endpoint": endpoint,
+            "model": model_name,
+        }
+
     def generate_room_redesign(
         self,
         source_path: Path,
@@ -134,11 +157,10 @@ def _extract_b64_image(payload: dict[str, object]) -> str:
 
 
 def _load_image_for_sd(source_path: Path) -> tuple[Image.Image, int, int]:
-    image = ImageOps.exif_transpose(Image.open(source_path)).convert("RGB")
+    with Image.open(source_path) as source_image:
+        image = ImageOps.exif_transpose(source_image).convert("RGB")
     max_size = max(512, settings.sd_webui_max_size)
-    image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-    width = _multiple_of_64(image.width)
-    height = _multiple_of_64(image.height)
+    width, height = _sd_dimensions(image.width, image.height, max_size)
     if image.size != (width, height):
         image = image.resize((width, height), Image.Resampling.LANCZOS)
     return image, width, height
@@ -156,9 +178,38 @@ def _decode_base64_image(value: str) -> bytes:
     return base64.b64decode(value)
 
 
-def _multiple_of_64(value: int) -> int:
+def _get_json(url: str, timeout_seconds: int) -> dict[str, object]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout_seconds) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"AUTOMATIC1111 status check failed: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            "AUTOMATIC1111 is not reachable. Start Stable Diffusion WebUI with --api "
+            f"and confirm {settings.sd_webui_url} is available. Error: {exc.reason}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("AUTOMATIC1111 returned an invalid status payload.")
+    return payload
+
+
+def _clamped_multiple_of_64(value: int, max_size: int) -> int:
     rounded = round(value / 64) * 64
-    return max(512, int(rounded))
+    rounded = max(64, int(rounded))
+    return min(max_size, rounded)
+
+
+def _sd_dimensions(width: int, height: int, max_size: int) -> tuple[int, int]:
+    scale = min(max_size / width, max_size / height)
+    shortest_after_scale = min(width, height) * scale
+    if shortest_after_scale < 512:
+        scale = min(scale, max_size / max(width, height), 512 / min(width, height))
+    return (
+        _clamped_multiple_of_64(int(width * scale), max_size),
+        _clamped_multiple_of_64(int(height * scale), max_size),
+    )
 
 
 def _multipart_body(

@@ -47,6 +47,21 @@ THEME_KITS: dict[str, dict[str, object]] = {
     },
 }
 
+COLOR_ALIASES = {
+    "beige": "#d8c7ad",
+    "brass": "#c4a35a",
+    "charcoal": "#303433",
+    "cream": "#f3ead8",
+    "greige": "#cfc7ba",
+    "ivory": "#f7f2e7",
+    "oak": "#b98c5f",
+    "olive": "#7b8467",
+    "sage": "#9aa58f",
+    "stone": "#ded8cc",
+    "terracotta": "#b56f55",
+    "walnut": "#7a5238",
+}
+
 
 class RedesignGenerator:
     def __init__(self) -> None:
@@ -66,9 +81,7 @@ class RedesignGenerator:
             key = theme.lower().strip()
             kit = THEME_KITS.get(key, THEME_KITS["modern"])
             filename = f"concept-{index + 1}-{key.replace(' ', '-')}.{_output_extension()}"
-            palette = list(kit["palette"])
-            if brief.palette:
-                palette = (brief.palette + palette)[:4]
+            palette = _normalize_palette([str(color) for color in kit["palette"]], brief.palette)
             preview_url = f"__ASSET__/{filename}"
             output_path = output_dir / filename
             self._generate_concept_image(source_path, output_path, brief, key, palette, str(kit["title"]))
@@ -365,12 +378,39 @@ class RedesignGenerator:
 
 
 def _rgba(value: str, alpha: int) -> tuple[int, int, int, int]:
-    color = value.strip().lstrip("#")
+    normalized = _normalize_color(value)
+    color = normalized.lstrip("#") if normalized else "d8d1c2"
+    try:
+        return (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16), alpha)
+    except ValueError:
+        color = "d8d1c2"
+        return (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16), alpha)
+
+
+def _normalize_palette(default_palette: list[str], user_palette: list[str]) -> list[str]:
+    colors: list[str] = []
+    for value in [*user_palette, *default_palette]:
+        color = _normalize_color(value)
+        if color and color not in colors:
+            colors.append(color)
+        if len(colors) == 4:
+            return colors
+    fallback = ["#f3f0e8", "#9aa58f", "#2f3430", "#c7b299"]
+    return [*colors, *fallback[len(colors):]][:4]
+
+
+def _normalize_color(value: str) -> str | None:
+    color = value.strip().lower()
+    if not color:
+        return None
+    if color in COLOR_ALIASES:
+        return COLOR_ALIASES[color]
+    color = color.lstrip("#")
     if len(color) == 3:
         color = "".join(ch * 2 for ch in color)
-    if len(color) != 6:
-        color = "d8d1c2"
-    return (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16), alpha)
+    if len(color) == 6 and all(char in "0123456789abcdef" for char in color):
+        return f"#{color}"
+    return None
 
 
 def _prepare_render_canvas(image: Image.Image) -> Image.Image:
